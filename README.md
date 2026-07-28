@@ -41,7 +41,7 @@ Query params stay on the path, e.g. `/connect?pic=cat&diff=easy`, `/maze?size=8&
 
 Legacy `#mazes` / `#dots` / `#trace` links still work and upgrade to the path form.
 
-Games are chosen from the **Game** dropdown (registry in `js/hub.js`). Adding another game = registry entry + panel + path mapping in `common.js`.
+Games are chosen from the top button row (up to 5; overflow in a ☰ menu). Registry lives in `js/hub.js`. Adding another game = registry entry + panel + path mapping in `common.js`.
 
 On GitHub project pages (`username.github.io/maze/…`), paths are prefixed with the repo name automatically (`/maze/connect`, `/maze/trace`).
 
