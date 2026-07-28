@@ -35,6 +35,7 @@ import {
   pickDailyTraceGlyph,
   guideStyleForDifficulty,
 } from "./trace.js";
+import { getGlyphTip, ENCOURAGE_TIPS } from "./trace-tips.js";
 import { letterPaths, numberPaths, shapePaths } from "./dots-shapes.js";
 import library from "./dots-library.json" with { type: "json" };
 
@@ -345,6 +346,22 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(easy.showArrows && easy.showStrokeNumbers, "easy guides show arrows and numbers");
   const hard = guideStyleForDifficulty("hard");
   assert(!hard.showArrows && !hard.showLines, "hard guides are minimal");
+}
+
+// Parent tips for Trace
+{
+  const p = getGlyphTip("letter", "P");
+  assert(p?.steps?.length >= 2, "P has parent stroke steps");
+  assert(/top/i.test(p.steps[0]), "P tip starts from the top");
+  const nine = getGlyphTip("number", "9");
+  assert(nine?.steps?.length >= 1, "9 has parent stroke steps");
+  for (const ch of "ABCDEFGHIJKLMNOPQRSTUVWXYZ") {
+    assert(getGlyphTip("letter", ch)?.steps?.length > 0, `tip for ${ch}`);
+  }
+  for (const n of "0123456789") {
+    assert(getGlyphTip("number", n)?.steps?.length > 0, `tip for ${n}`);
+  }
+  assert(ENCOURAGE_TIPS.length >= 5, "encouragement tips available");
 }
 
 if (failed) {
