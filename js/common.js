@@ -72,37 +72,135 @@ export async function copyToClipboard(text) {
   document.body.removeChild(ta);
 }
 
-/** @returns {{ game: string, params: URLSearchParams }} */
-export function parseGameHash(hash = window.location.hash) {
-  const raw = (hash.startsWith("#") ? hash.slice(1) : hash).trim();
-  if (!raw) return { game: "mazes", params: new URLSearchParams() };
-  const q = raw.indexOf("?");
-  const game = (q === -1 ? raw : raw.slice(0, q)).trim() || "mazes";
-  const params = new URLSearchParams(q === -1 ? "" : raw.slice(q + 1));
+/** Path segment for each internal game id (URLs users see). */
+export const GAME_PATHS = {
+  mazes: "maze",
+  dots: "connect",
+  trace: "trace",
+};
+
+/** Map URL path segments (and legacy names) → internal game id. */
+export const PATH_TO_GAME = {
+  maze: "mazes",
+  mazes: "mazes",
+  connect: "dots",
+  dots: "dots",
+  trace: "trace",
+};
+
+/**
+ * Resolve site base + active game from the location.
+ * Handles GitHub project pages (/&lt;repo&gt;/connect) where the repo may be named "maze".
+ */
+export function resolveLocation() {
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  const isGhProject = /\.github\.io$/i.test(window.location.hostname) && parts.length >= 1;
+
+  if (isGhProject) {
+    const repo = parts[0];
+    const rest = parts.slice(1);
+    let gameSeg = null;
+    if (rest.length && PATH_TO_GAME[rest[rest.length - 1]]) {
+      gameSeg = rest[rest.length - 1];
+    }
+    return {
+      base: `/${repo}/`,
+      game: gameSeg ? PATH_TO_GAME[gameSeg] : "mazes",
+    };
+  }
+
+  let gameSeg = null;
+  const copy = [...parts];
+  if (copy.length && PATH_TO_GAME[copy[copy.length - 1]]) {
+    gameSeg = copy.pop();
+  } else if (copy.length && /\.html?$/i.test(copy[copy.length - 1])) {
+    copy.pop();
+  }
+  return {
+    base: copy.length ? `/${copy.join("/")}/` : "/",
+    game: gameSeg ? PATH_TO_GAME[gameSeg] : "mazes",
+  };
+}
+
+/** Site base path, e.g. "/" or "/maze/" for project GitHub Pages. */
+export function getBasePath() {
+  if (typeof window !== "undefined" && window.__PUZZLE_BASE__) {
+    return window.__PUZZLE_BASE__;
+  }
+  return resolveLocation().base;
+}
+
+function paramsFromObject(params = {}) {
+  const sp = new URLSearchParams();
+  if (params instanceof URLSearchParams) {
+    for (const [k, v] of params.entries()) {
+      if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
+    }
+    return sp;
+  }
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
+  }
+  return sp;
+}
+
+/**
+ * Read the active game from the path (/maze, /connect, /trace).
+ * Legacy hash routes (#mazes, #dots?pic=…) are still recognized.
+ * @returns {{ game: string, params: URLSearchParams, legacyHash: boolean }}
+ */
+export function parseGameRoute() {
+  const raw = (window.location.hash.startsWith("#")
+    ? window.location.hash.slice(1)
+    : window.location.hash
+  ).trim();
+  if (raw) {
+    const q = raw.indexOf("?");
+    const seg = (q === -1 ? raw : raw.slice(0, q)).trim();
+    if (PATH_TO_GAME[seg]) {
+      const merged = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(q === -1 ? "" : raw.slice(q + 1));
+      for (const [k, v] of hashParams.entries()) merged.set(k, v);
+      return { game: PATH_TO_GAME[seg], params: merged, legacyHash: true };
+    }
+  }
+
+  const { game } = resolveLocation();
+  return {
+    game,
+    params: new URLSearchParams(window.location.search),
+    legacyHash: false,
+  };
+}
+
+/** @deprecated Use parseGameRoute — kept as an alias for older call sites. */
+export function parseGameHash() {
+  const { game, params } = parseGameRoute();
   return { game, params };
 }
 
 export function buildGameUrl(game, params = {}) {
-  const url = new URL(window.location.href);
-  const sp = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
-  }
+  const base = getBasePath();
+  const seg = GAME_PATHS[game] || "maze";
+  const sp = paramsFromObject(params);
   const q = sp.toString();
-  url.hash = q ? `${game}?${q}` : game;
-  return url.toString();
+  const path = `${base}${seg}${q ? `?${q}` : ""}`;
+  return new URL(path, window.location.origin).toString();
 }
 
-export function setGameHash(game, params = {}, replace = true) {
-  const sp = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) {
-    if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
-  }
+export function setGameRoute(game, params = {}, replace = true) {
+  const base = getBasePath();
+  const seg = GAME_PATHS[game] || "maze";
+  const sp = paramsFromObject(params);
   const q = sp.toString();
-  const hash = q ? `#${game}?${q}` : `#${game}`;
-  const path = window.location.pathname + window.location.search + hash;
-  if (replace) history.replaceState(null, "", path);
-  else history.pushState(null, "", path);
+  const url = `${base}${seg}${q ? `?${q}` : ""}`;
+  if (replace) history.replaceState(null, "", url);
+  else history.pushState(null, "", url);
+}
+
+/** @deprecated Use setGameRoute — kept as an alias for older call sites. */
+export function setGameHash(game, params = {}, replace = true) {
+  setGameRoute(game, params, replace);
 }
 
 export class GameTimer {

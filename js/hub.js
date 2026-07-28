@@ -3,14 +3,16 @@
  *
  * Games are registered in GAMES; the switcher UI is built from that list
  * so adding a 4th–6th game is one registry entry + a panel in HTML.
+ *
+ * URLs: /maze · /connect · /trace  (legacy #hash links still redirect)
  */
 
 import { MazeApp } from "./ui.js";
 import { DotsApp } from "./dots.js";
 import { TraceApp } from "./trace.js";
 import {
-  parseGameHash,
-  setGameHash,
+  parseGameRoute,
+  setGameRoute,
   initTheme,
 } from "./common.js";
 
@@ -59,13 +61,13 @@ class GameHub {
       this.traceApp?._render?.();
     });
 
-    // Snapshot the intended route before any game init can touch the hash.
-    const bootRoute = parseGameHash();
-    if (!window.location.hash || !GAMES[bootRoute.game]) {
-      setGameHash("mazes", {}, true);
-      bootRoute.game = "mazes";
-      bootRoute.params = new URLSearchParams();
+    let bootRoute = parseGameRoute();
+    if (!GAMES[bootRoute.game]) {
+      bootRoute = { game: "mazes", params: new URLSearchParams(), legacyHash: false };
     }
+    // Normalize to /maze · /connect · /trace (and migrate legacy #hash links).
+    setGameRoute(bootRoute.game, Object.fromEntries(bootRoute.params.entries()), true);
+    bootRoute = parseGameRoute();
 
     this.mazeApp = new MazeApp();
     this.mazeApp.init();
@@ -78,8 +80,7 @@ class GameHub {
 
     this._bindSwitcher();
     this._applyRoute(bootRoute, true);
-    const onRoute = () => this._applyRoute(parseGameHash(), false);
-    window.addEventListener("hashchange", onRoute);
+    const onRoute = () => this._applyRoute(parseGameRoute(), false);
     window.addEventListener("popstate", onRoute);
   }
 
@@ -116,12 +117,6 @@ class GameHub {
     });
   }
 
-  _paramsForGame(game) {
-    if (game === "dots") return this.dotsApp?.getShareParams?.() || this.dotsApp?._syncUrl?.() || {};
-    if (game === "trace") return this.traceApp?.getShareParams?.() || this.traceApp?._syncUrl?.() || {};
-    return {};
-  }
-
   _panelFor(game) {
     if (game === "dots") return this.els.panelDots;
     if (game === "trace") return this.els.panelTrace;
@@ -133,7 +128,7 @@ class GameHub {
     let params = {};
     if (game === "dots") params = this.dotsApp?.getShareParams?.() || {};
     if (game === "trace") params = this.traceApp?.getShareParams?.() || {};
-    setGameHash(game, params, false);
+    setGameRoute(game, params, false);
     const sp = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
@@ -171,6 +166,7 @@ class GameHub {
     if (initial) {
       if (next === "dots") this.dotsApp?._syncUrl?.();
       if (next === "trace") this.traceApp?._syncUrl?.();
+      if (next === "mazes") this.mazeApp?._syncUrl?.();
     }
   }
 }
