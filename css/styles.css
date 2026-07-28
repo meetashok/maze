@@ -693,13 +693,44 @@ input {
 
 .bulk-select,
 .bulk-count {
-  min-height: 44px;
+  display: block;
+  width: 100%;
+  height: 48px;
+  min-height: 48px;
+  box-sizing: border-box;
   border-radius: 10px;
   border: 2px solid var(--btn-ghost-border);
-  background: var(--emoji-btn-bg);
+  background-color: var(--emoji-btn-bg);
   color: var(--ink);
-  padding: 0 10px;
+  padding: 0 12px;
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 44px;
+}
+
+.bulk-select {
+  /* Native selects often ignore min-height; force equal control chrome */
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 2.25rem;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%),
+    linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position:
+    calc(100% - 18px) calc(50% - 3px),
+    calc(100% - 12px) calc(50% - 3px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat: no-repeat;
+}
+
+.bulk-count {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
+.bulk-count::-webkit-outer-spin-button,
+.bulk-count::-webkit-inner-spin-button {
+  margin: 0;
 }
 
 .bulk-remove {
@@ -844,47 +875,59 @@ input {
     margin: 0.5in;
   }
 
+  html,
   body {
     background: #fff !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
-  body * {
-    visibility: hidden;
-  }
-
-  body.printing .print-sheet,
-  body.printing .print-sheet * {
-    visibility: visible;
+  /* Hide app chrome with display:none so page-breaks work.
+     (visibility:hidden + position:absolute breaks pagination in Chrome.) */
+  body.printing .app,
+  body.printing .modal,
+  body.printing .toast,
+  body.printing .confetti-canvas {
+    display: none !important;
   }
 
   body.printing .print-sheet {
     display: block !important;
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
+    position: static !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
     color: #000;
+    visibility: visible !important;
   }
 
-  .app,
-  .modal,
-  .toast,
-  .confetti-canvas {
-    display: none !important;
+  body.printing .print-sheet[hidden] {
+    display: block !important;
   }
 
   .print-page {
-    page-break-after: always;
-    break-after: page;
-    display: flex;
-    flex-direction: column;
-    min-height: 9.5in;
+    display: block;
     box-sizing: border-box;
+    width: 100%;
+    break-inside: avoid;
+    page-break-inside: avoid;
+    break-after: page;
+    page-break-after: always;
   }
 
   .print-page:last-child {
-    page-break-after: auto;
     break-after: auto;
+    page-break-after: auto;
+  }
+
+  .print-page-separator {
+    display: block;
+    height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    break-after: page;
+    page-break-after: always;
   }
 
   .print-title {
@@ -917,15 +960,12 @@ input {
   }
 
   .print-card {
-    margin: 0;
+    margin: 0 auto;
     page-break-inside: avoid;
+    break-inside: avoid;
     width: 100%;
+    max-width: 7.5in;
     text-align: center;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
   }
 
   .print-card figcaption {
@@ -946,8 +986,7 @@ input {
   }
 
   .print-credit {
-    margin-top: auto;
-    padding-top: 12pt;
+    margin-top: 18pt;
     text-align: center;
     font-size: 9pt;
     color: #666;
