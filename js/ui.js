@@ -232,7 +232,9 @@ export class MazeApp {
 
     els.shareShortlink?.addEventListener("click", (e) => {
       e.preventDefault();
-      this._shareToolLink();
+      e.stopPropagation();
+      // Keep share() in the same user-gesture turn (required on mobile).
+      void this._shareToolLink();
     });
 
     els.timerToggle.addEventListener("change", () => {
