@@ -138,6 +138,8 @@ export class MazeApp {
     document.documentElement.setAttribute("data-theme", theme);
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) meta.content = theme === THEME_DARK ? "#0f1c24" : "#2a9d8f";
+    // Force style refresh for SVG presentation attributes that use CSS vars
+    if (this.maze) this._redraw();
   }
 
   _bindControls() {

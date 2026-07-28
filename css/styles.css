@@ -1,7 +1,6 @@
 /* Maze Play — bright, kid-friendly, mobile-first */
 
-:root,
-[data-theme="light"] {
+:root {
   color-scheme: light;
   --teal: #1f8a7e;
   --teal-deep: #14665d;
@@ -38,7 +37,8 @@
     linear-gradient(165deg, #e8f6fb 0%, var(--cream) 45%, #ffe8d6 100%);
 }
 
-[data-theme="dark"] {
+/* Higher specificity than :root so dark vars always win on desktop & mobile */
+html[data-theme="dark"] {
   color-scheme: dark;
   --teal: #3ecfbe;
   --teal-deep: #7ee0d4;
@@ -75,19 +75,26 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+html {
   margin: 0;
   min-height: 100%;
+  background-color: #e8f6fb;
+  background-image: var(--page-bg);
+  background-attachment: scroll;
+}
+
+html[data-theme="dark"] {
+  background-color: #0a1218;
 }
 
 body {
+  margin: 0;
+  min-height: 100%;
+  min-height: 100dvh;
   font-family: var(--font-body);
   color: var(--ink);
-  background: var(--page-bg);
-  background-attachment: fixed;
+  background: transparent;
   -webkit-tap-highlight-color: transparent;
-  transition: color 0.2s ease, background 0.2s ease;
 }
 
 button,
