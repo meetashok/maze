@@ -27,6 +27,7 @@ import {
   buildPuzzleFromPaths,
   labelForIndex,
   pickDailyPicture,
+  resolvePictureGuides,
 } from "./dots.js";
 import {
   resolveTraceGlyph,
@@ -235,8 +236,11 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
 // Dots regression: spacing and clustering
 {
   const butterfly = library.pictures.find((p) => p.id === "butterfly");
-  const puzzle = buildPuzzleFromPaths(butterfly.paths, "medium", "numbers");
+  const puzzle = buildPuzzleFromPaths(butterfly.paths, "medium", "numbers", {
+    guides: butterfly.guides,
+  });
   assert(puzzle.points.length >= 15 && puzzle.points.length <= 25, "butterfly medium respects spacing");
+  assert(puzzle.guides.length >= 3, "butterfly has pre-drawn guides");
 
   let closePairs = 0;
   for (let i = 0; i < puzzle.points.length; i++) {
@@ -282,6 +286,19 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   const xs = puzzle.points.map((p) => p.x);
   const bboxW = Math.max(...xs) - Math.min(...xs);
   assert(bboxW >= 0.55, "butterfly uses most of canvas width");
+}
+
+// Scaffolded guides prototype (cat, butterfly, fish)
+{
+  for (const id of ["cat", "butterfly", "fish"]) {
+    const pic = library.pictures.find((p) => p.id === id);
+    assert(Array.isArray(pic.guides) && pic.guides.length > 0, `${id} has guides`);
+    assert(pic.paths.length === 1, `${id} has a single connect outline`);
+    const puzzle = buildPuzzleFromPaths(pic.paths, "medium", "numbers", { guides: pic.guides });
+    assert(puzzle.guides.length === pic.guides.length, `${id} guides survive fit`);
+    assert(puzzle.points.length >= 12, `${id} has enough outline dots`);
+    assert(resolvePictureGuides(pic).length === pic.guides.length, `${id} resolvePictureGuides`);
+  }
 }
 
 // Generated letter paths
