@@ -29,6 +29,20 @@
   stroke-width: 0.6;
 }
 
+.dots-guide {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.55;
+}
+
+.dots-guides.complete .dots-guide {
+  opacity: 0.9;
+  stroke-width: 1.3;
+}
+
 .dots-line {
   stroke: var(--path);
   stroke-width: 1.2;

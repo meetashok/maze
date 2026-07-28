@@ -173,8 +173,8 @@ function collectBounds(paths, points) {
   };
 }
 
-function fitGeometry(paths, points, min = FIT_MIN, max = FIT_MAX) {
-  const bounds = collectBounds(paths, points);
+function fitGeometry(paths, points, min = FIT_MIN, max = FIT_MAX, guides = []) {
+  const bounds = collectBounds([...paths, ...guides], points);
   const w = bounds.maxX - bounds.minX || 1;
   const h = bounds.maxY - bounds.minY || 1;
   const span = max - min;
@@ -188,6 +188,7 @@ function fitGeometry(paths, points, min = FIT_MIN, max = FIT_MAX) {
   });
   return {
     paths: paths.map((path) => path.map(map)),
+    guides: guides.map((path) => path.map(map)),
     points: points.map(map),
   };
 }
@@ -234,14 +235,16 @@ function normalizePaths(rawPaths) {
 export function buildPuzzleFromPaths(paths, difficulty, labelType = "numbers", options = {}) {
   let count = DIFFICULTY_COUNTS[difficulty] || DIFFICULTY_COUNTS.medium;
   const norm = normalizePaths(paths);
+  const guides = normalizePaths(options.guides || []);
   count = Math.min(count, maxDotsForPaths(norm));
   if (options.compact) count = Math.min(count, difficulty === "hard" ? 30 : difficulty === "medium" ? 18 : 10);
   const points = enforceMinSpacing(samplePaths(norm, count));
-  const fitted = fitGeometry(norm, points);
+  const fitted = fitGeometry(norm, points, FIT_MIN, FIT_MAX, guides);
   return {
     points: fitted.points,
     labels: buildLabels(fitted.points.length, labelType),
     paths: fitted.paths,
+    guides: fitted.guides,
   };
 }
 
@@ -285,6 +288,12 @@ export function resolvePicturePaths(picture) {
   if (picture.paths) return normalizePaths(picture.paths);
   const gen = resolveGeneratedPicture(picture);
   return gen?.paths || [];
+}
+
+export function resolvePictureGuides(picture) {
+  if (picture.guides?.length) return normalizePaths(picture.guides);
+  const gen = resolveGeneratedPicture(picture);
+  return gen?.guides ? normalizePaths(gen.guides) : [];
 }
 
 export function resolvePictureColor(picture) {
@@ -523,8 +532,9 @@ export class DotsApp {
     this.els.completeBanner.hidden = true;
 
     const paths = resolvePicturePaths(this.picture);
+    const guides = resolvePictureGuides(this.picture);
     const compact = Boolean(this.picture?.generated);
-    this.puzzle = buildPuzzleFromPaths(paths, this.difficulty, this.labelType, { compact });
+    this.puzzle = buildPuzzleFromPaths(paths, this.difficulty, this.labelType, { compact, guides });
     this.puzzle.color = resolvePictureColor(this.picture);
 
     this._updateBestDisplay();
@@ -744,6 +754,19 @@ export class DotsApp {
       }
     }
 
+    const guidesG = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    guidesG.setAttribute("class", `dots-guides${this.completed ? " complete" : ""}`);
+    for (const path of this.puzzle.guides || []) {
+      if (path.length < 2) continue;
+      const guide = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      let d = `M ${tx(path[0].x)} ${ty(path[0].y)}`;
+      for (let i = 1; i < path.length; i++) d += ` L ${tx(path[i].x)} ${ty(path[i].y)}`;
+      guide.setAttribute("d", d);
+      guide.setAttribute("class", "dots-guide");
+      guidesG.appendChild(guide);
+    }
+    svg.appendChild(guidesG);
+
     const lines = document.createElementNS("http://www.w3.org/2000/svg", "g");
     lines.setAttribute("class", `dots-lines${this.completed ? " dots-lines-complete" : ""}`);
     for (let i = 1; i < lineCount; i++) {
@@ -888,6 +911,20 @@ export class DotsApp {
     svg.setAttribute("viewBox", `0 0 ${vb} ${vb}`);
     svg.setAttribute("class", "dots-print-svg");
 
+    for (const path of puzzle.guides || []) {
+      if (path.length < 2) continue;
+      const guide = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      let d = `M ${tx(path[0].x)} ${ty(path[0].y)}`;
+      for (let i = 1; i < path.length; i++) d += ` L ${tx(path[i].x)} ${ty(path[i].y)}`;
+      guide.setAttribute("d", d);
+      guide.setAttribute("fill", "none");
+      guide.setAttribute("stroke", "#444");
+      guide.setAttribute("stroke-width", "0.7");
+      guide.setAttribute("stroke-linecap", "round");
+      guide.setAttribute("stroke-linejoin", "round");
+      svg.appendChild(guide);
+    }
+
     if (showSolution) {
       const fill = document.createElementNS("http://www.w3.org/2000/svg", "path");
       const d = puzzle.paths
@@ -987,7 +1024,8 @@ export class DotsApp {
       for (let i = 0; i < count; i++) {
         const pic = pool[i % pool.length];
         const paths = resolvePicturePaths(pic);
-        const puzzle = buildPuzzleFromPaths(paths, this.difficulty, this.labelType);
+        const guides = resolvePictureGuides(pic);
+        const puzzle = buildPuzzleFromPaths(paths, this.difficulty, this.labelType, { guides });
         const card = document.createElement("figure");
         card.className = "print-card";
         const cap = document.createElement("figcaption");
