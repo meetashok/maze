@@ -3,9 +3,9 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Kid-friendly maze puzzle — help the frog reach the bug!" />
+    <meta name="description" content="Kid-friendly puzzle games — mazes and connect the dots!" />
     <meta name="theme-color" content="#2a9d8f" />
-    <title>Maze Play — Puzzle Generator</title>
+    <title>Puzzle Play — Maze & Connect the Dots</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -13,6 +13,7 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/styles.css" />
+    <link rel="stylesheet" href="css/dots.css" />
     <script>
       (function () {
         try {
@@ -26,11 +27,12 @@
     <div class="app">
       <header class="top-bar">
         <div class="brand-block">
-          <p class="brand">Maze Play</p>
-          <p class="tagline">Help the frog reach the bug</p>
+          <p id="hub-brand" class="brand">Maze Play</p>
+          <p id="hub-tagline" class="tagline">Help the frog reach the bug</p>
         </div>
         <div class="top-bar-actions">
           <p id="brand-date" class="daily-chip" hidden></p>
+          <p id="dots-daily-chip" class="daily-chip" hidden></p>
           <label class="theme-swap" aria-label="Toggle light or dark theme" title="Light / dark">
             <input type="checkbox" id="theme-toggle" checked />
             <span class="theme-icon theme-icon-sun" aria-hidden="true">☀</span>
@@ -39,6 +41,12 @@
         </div>
       </header>
 
+      <nav class="game-tabs" aria-label="Games">
+        <button type="button" id="tab-mazes" class="game-tab is-active" aria-selected="true">Mazes</button>
+        <button type="button" id="tab-dots" class="game-tab" aria-selected="false">Connect the Dots</button>
+      </nav>
+
+      <div id="game-mazes" class="game-panel">
       <main class="main">
         <section class="maze-panel" aria-label="Maze">
           <div id="maze-stage" class="maze-stage" tabindex="0"></div>
@@ -102,9 +110,73 @@
           </div>
         </section>
       </main>
+      </div>
+
+      <div id="game-dots" class="game-panel" hidden>
+        <main class="main">
+          <section class="dots-panel" aria-label="Connect the dots puzzle">
+            <div id="dots-stage" class="dots-stage"></div>
+            <p id="dots-complete-banner" class="dots-complete-banner" hidden>
+              <span class="dots-complete-title">Picture revealed!</span>
+              <span id="dots-complete-time"></span>
+              <span id="dots-complete-best" class="dots-complete-best"></span>
+            </p>
+          </section>
+
+          <section class="primary-actions" aria-label="Dots actions">
+            <button type="button" id="dots-btn-new" class="btn btn-primary">New Picture</button>
+            <button type="button" id="dots-btn-reset" class="btn btn-secondary">Start Over</button>
+            <button type="button" id="dots-btn-daily" class="btn btn-secondary">Daily Puzzle</button>
+          </section>
+
+          <section class="toolbar" aria-label="Dots controls">
+            <div class="control-block">
+              <p class="control-label">Category</p>
+              <div id="dots-categories" class="category-buttons" role="group" aria-label="Picture category"></div>
+            </div>
+
+            <div class="control-block">
+              <p class="control-label">Difficulty</p>
+              <div id="dots-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
+                <button type="button" class="diff-btn" data-diff="easy" aria-pressed="false">Easy</button>
+                <button type="button" class="diff-btn is-active" data-diff="medium" aria-pressed="true">Medium</button>
+                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
+              </div>
+            </div>
+
+            <div class="control-block control-row">
+              <label class="control-label" for="dots-label-type">Labels</label>
+              <select id="dots-label-type" class="dots-select">
+                <option value="numbers">Numbers (1, 2, 3…)</option>
+                <option value="letters">Letters (A, B, C…)</option>
+                <option value="skip">Skip counting (2, 4, 6…)</option>
+              </select>
+            </div>
+
+            <div class="btn-row">
+              <button type="button" id="dots-btn-hint" class="btn btn-ghost">Show Hint</button>
+              <button type="button" id="dots-btn-share" class="btn btn-ghost">Share</button>
+              <button type="button" id="dots-btn-print" class="btn btn-ghost">Print</button>
+            </div>
+
+            <div class="timer-row">
+              <label class="toggle">
+                <input type="checkbox" id="dots-timer-toggle" checked />
+                <span>Timer</span>
+              </label>
+              <label class="toggle">
+                <input type="checkbox" id="dots-auto-hint" checked />
+                <span>Auto-hint</span>
+              </label>
+              <span id="dots-timer-display" class="timer-display">0:00.0</span>
+              <span id="dots-best-display" class="best-display">Best: —</span>
+            </div>
+          </section>
+        </main>
+      </div>
 
       <footer class="footer">
-        <p class="footer-howto">Trace a path so the frog can eat the bug. Drag backward to undo.</p>
+        <p class="footer-howto" id="footer-howto">Trace a path so the frog can eat the bug. Drag backward to undo.</p>
         <p class="footer-share">
           Share the tool with others:
           <a
@@ -209,11 +281,55 @@
       </div>
     </div>
 
+    <!-- Dots print options -->
+    <div id="dots-print-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="dots-print-modal-title">
+      <div class="modal-card modal-card-wide">
+        <header class="modal-header">
+          <h2 id="dots-print-modal-title">Print connect-the-dots</h2>
+          <button type="button" id="dots-print-modal-close" class="btn btn-icon" aria-label="Close">×</button>
+        </header>
+
+        <fieldset class="print-fieldset">
+          <legend>Layout</legend>
+          <label class="radio">
+            <input type="radio" name="dots-print-layout" value="single" checked />
+            One puzzle
+          </label>
+          <label class="radio">
+            <input type="radio" name="dots-print-layout" value="worksheet4" />
+            Worksheet — 4 puzzles (2×2)
+          </label>
+          <label class="radio">
+            <input type="radio" name="dots-print-layout" value="worksheet6" />
+            Worksheet — 6 puzzles (2×3)
+          </label>
+        </fieldset>
+
+        <fieldset class="print-fieldset">
+          <legend>Content</legend>
+          <label class="radio">
+            <input type="radio" name="dots-print-solution" value="no" checked />
+            Dots only (worksheet)
+          </label>
+          <label class="radio">
+            <input type="radio" name="dots-print-solution" value="yes" />
+            With solution lines
+          </label>
+          <label class="toggle print-coloring-toggle">
+            <input type="checkbox" id="dots-print-coloring" />
+            <span>Coloring page (outline only, after completing on screen)</span>
+          </label>
+        </fieldset>
+
+        <button type="button" id="dots-print-go" class="btn btn-primary btn-block">Print</button>
+      </div>
+    </div>
+
     <div id="toast" class="toast" hidden role="status"></div>
 
     <!-- Print-only sheet -->
     <div id="print-sheet" class="print-sheet" hidden></div>
 
-    <script type="module" src="js/ui.js"></script>
+    <script type="module" src="js/hub.js"></script>
   </body>
 </html>

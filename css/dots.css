@@ -1,0 +1,207 @@
+/* Connect the Dots — game-specific styles */
+
+.dots-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.dots-stage {
+  width: min(100%, 560px);
+  aspect-ratio: 1;
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow);
+  background: var(--floor);
+  overflow: hidden;
+}
+
+.dots-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.dots-fill {
+  opacity: 0.85;
+  stroke: var(--ink);
+  stroke-width: 0.6;
+}
+
+.dots-line {
+  stroke: var(--path);
+  stroke-width: 1.2;
+  stroke-linecap: round;
+}
+
+.dot-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+.dot-hit.next {
+  fill: rgba(255, 107, 74, 0.12);
+}
+
+.dot {
+  fill: var(--ink);
+  stroke: var(--floor);
+  stroke-width: 0.5;
+}
+
+.dot.done {
+  fill: var(--ink-soft);
+  opacity: 0.45;
+}
+
+.dot.next {
+  fill: var(--coral);
+}
+
+.dot.pulse,
+.dot-hit.pulse {
+  animation: dot-pulse 1s ease-in-out infinite;
+}
+
+.dot-label {
+  font-family: var(--font-display);
+  font-size: 4.5px;
+  font-weight: 800;
+  fill: var(--ink);
+  pointer-events: none;
+  user-select: none;
+}
+
+.dot-label.done {
+  fill: var(--ink-soft);
+  opacity: 0.4;
+}
+
+.dot-group.shake {
+  animation: dot-shake 0.35s ease;
+}
+
+@keyframes dot-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15); opacity: 0.85; }
+}
+
+@keyframes dot-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
+}
+
+.dots-complete-banner {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(107, 203, 119, 0.25);
+  color: var(--ink);
+  font-weight: 800;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(100%, 560px);
+}
+
+.dots-complete-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--teal-deep);
+}
+
+.dots-complete-best {
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  font-weight: 700;
+}
+
+.category-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.category-btn {
+  min-height: 40px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  border: 2px solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.category-btn.is-active,
+.category-btn[aria-pressed="true"] {
+  background: rgba(42, 157, 143, 0.18);
+  border-color: var(--teal);
+  color: var(--teal-deep);
+}
+
+.diff-buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.diff-btn {
+  min-height: 40px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 2px solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.diff-btn.is-active,
+.diff-btn[aria-pressed="true"] {
+  background: rgba(255, 200, 87, 0.35);
+  border-color: var(--sun);
+  color: #7a5600;
+}
+
+[data-theme="dark"] .diff-btn.is-active {
+  color: #ffd36a;
+}
+
+.dots-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.control-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+@media print {
+  .print-dots-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .print-dots-grid .dots-print-svg {
+    width: 100%;
+    height: auto;
+    max-height: 42vh;
+  }
+}

@@ -1,74 +1,59 @@
-# Maze Play
+# Puzzle Play
 
-Kid-friendly maze puzzle generator. Help the frog 🐸 reach the bug 🐛 so it can eat! Trace a path with your finger or mouse, print worksheets, share a maze link, and race the daily puzzle. Pure client-side — HTML, CSS, and JavaScript. No backend.
+Kid-friendly puzzle games for ages 3–8. **Maze Play** — help the frog reach the bug. **Connect the Dots** — tap numbered dots to reveal pictures. Pure client-side HTML, CSS, and JavaScript. No backend.
 
-**Live:** enable [GitHub Pages](https://pages.github.com/) on this repo (`Settings → Pages → Deploy from a branch → main → / (root)`). The site will be at `https://<user>.github.io/maze/`.
+**Live:** enable [GitHub Pages](https://pages.github.com/) on this repo (`Settings → Pages → Deploy from a branch → main → / (root)`).
 
-## How to play
+## Games
 
-1. Start at the frog (top-left) and drag through open corridors to the bug (bottom-right).
-2. Drag backward along your path to undo. **Clear Path** resets the trail without changing the maze.
-3. **New Maze** builds a fresh random maze. **Daily Maze** is the same 8×8 Tricky puzzle for everyone today.
-4. Pick a **Style** — Simple, Branchy, Tricky, or Expert — to change how twisty the corridors feel (independent of grid size).
-5. **Show Hint** reveals the next few steps. **Show Solution** draws the full shortest path.
-6. Beat your personal best with the optional timer (saved in your browser).
-7. Use the sun/moon button for light or dark theme.
+### Mazes
+1. Trace from the frog (top-left) to the bug (bottom-right).
+2. Pick grid size and style (Simple → Expert algorithms).
+3. Daily maze, hints, print worksheets, share links, timer + personal bests.
+
+### Connect the Dots
+1. Pick a category and difficulty, then tap dots in order.
+2. Labels: numbers, letters, or skip counting.
+3. Daily puzzle, hints, auto-hint after idle, print worksheets, share links.
 
 ## Open locally
-
-No build step. Either open `index.html` in a modern browser, or serve the folder:
 
 ```bash
 npx --yes serve .
 ```
 
-Then visit the URL printed in the terminal (ES modules need a local server in some browsers).
+## URL routing
 
-## Shareable links
+| Hash / param | Meaning |
+|--------------|---------|
+| `#mazes` | Maze game tab |
+| `?size=8&seed=123` | Maze config (query string) |
+| `#dots?pic=cat&diff=medium` | Dots game with picture and difficulty |
+| `#dots?daily=1` | Daily connect-the-dots puzzle |
 
-Configuration is stored in the query string:
-
-| Param    | Meaning                                      |
-|----------|----------------------------------------------|
-| `size`   | Grid size 4–20                               |
-| `seed`   | Unsigned integer seed for generation         |
-| `detour` | Style 0–3: Simple, Branchy, Tricky, Expert  |
-| `start`  | Start emoji (URL-encoded)                    |
-| `end`    | End emoji (URL-encoded)                      |
-| `daily`  | `1` marks the daily maze                     |
-
-Example: `?size=8&seed=12345&detour=2&start=%F0%9F%90%B8&end=%F0%9F%90%9B`
-
-## Features (v1)
-
-- Multiple maze styles (DFS, Wilson, Kruskal + quality filter, light braiding) with seeded PRNG
-- Grid size difficulty bands: Easy 4–6, Medium 7–10, Hard 11–14, Expert 15–20
-- Style buttons: Simple / Branchy / Tricky / Expert (more dead ends and junctions at higher levels)
-- Touch + mouse path tracing, wall collision feedback, celebration
-- Icon picker, share link, timer + personal bests (`localStorage`)
-- Light / dark theme toggle
-- Print: single maze or 4/6 worksheet layouts, with or without solution
+Maze example: `?size=8&seed=12345#mazes`  
+Dots example: `#dots?pic=cat&diff=easy&labels=letters`
 
 ## Project layout
 
 ```
 /
-├── index.html
-├── css/styles.css
+├── index.html           # shell + tab navigation
+├── css/
+│   ├── styles.css       # shared + maze styles
+│   └── dots.css         # connect-the-dots styles
 ├── js/
-│   ├── maze.js          # generation + BFS solve
-│   ├── renderer.js      # SVG drawing
-│   ├── interaction.js   # path tracing
-│   ├── ui.js            # controls & print
-│   ├── utils.js         # PRNG, URL, storage
-│   └── confetti.js      # win celebration
+│   ├── hub.js           # tab router
+│   ├── common.js        # shared PRNG, timer, storage, hash routing
+│   ├── ui.js            # maze UI
+│   ├── maze.js          # maze generation + BFS
+│   ├── dots.js          # connect-the-dots game
+│   ├── dots-shapes.js   # algorithmic letters/numbers/shapes
+│   ├── dots-library.json
+│   └── smoke-test.mjs
 └── README.md
 ```
 
-## Phase 2 (not in this release)
-
-Shaped mazes, visual themes, and progressive “how far can you go?” mode.
-
 ## Feedback
 
-Open source on [GitHub](https://github.com/meetashok/maze). Feedback welcome — [send it here](mailto:ashok.iitb@gmail.com?subject=Maze%20Play%20feedback).
+Open source on [GitHub](https://github.com/meetashok/maze). Feedback welcome — [send it here](mailto:ashok.iitb@gmail.com?subject=Puzzle%20Play%20feedback).

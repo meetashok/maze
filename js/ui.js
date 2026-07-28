@@ -76,7 +76,6 @@ export class MazeApp {
     });
     this.tracer.attach(this.els.mazeStage);
 
-    this._initTheme();
     this._bindControls();
     this._buildIconGrid();
     this._loadFromUrlOrDefault();
@@ -856,7 +855,6 @@ export class MazeApp {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const app = new MazeApp();
-  app.init();
-  window.__mazeApp = app;
+  /* Initialized by hub.js */
 });
+

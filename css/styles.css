@@ -225,6 +225,53 @@ input {
   flex: 1;
 }
 
+/* —— Game hub tabs —— */
+.game-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+.game-tab {
+  min-height: 48px;
+  padding: 12px 10px;
+  border: none;
+  border-radius: calc(var(--radius) - 4px);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.game-tab.is-active,
+.game-tab[aria-selected="true"] {
+  background: var(--floor);
+  color: var(--teal-deep);
+  box-shadow: 0 2px 8px rgba(36, 48, 55, 0.1);
+}
+
+[data-theme="dark"] .game-tab.is-active {
+  color: #7fd9cc;
+}
+
+.game-panel[hidden] {
+  display: none !important;
+}
+
+.game-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 14px;
+}
+
 /* —— Maze —— */
 .maze-panel {
   position: relative;

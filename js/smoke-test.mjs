@@ -9,13 +9,24 @@ import {
   mulberry32,
   hashString,
   dailySeed,
+  dailyDotsSeed,
   deriveSeed,
+  formatTime,
+} from "./common.js";
+import {
   difficultyLabel,
   detourLabel,
-  formatTime,
   DAILY_SIZE,
   DAILY_DETOUR,
 } from "./utils.js";
+import {
+  samplePaths,
+  buildPuzzleFromPaths,
+  labelForIndex,
+  pickDailyPicture,
+} from "./dots.js";
+import { letterPaths, shapePaths } from "./dots-shapes.js";
+import library from "./dots-library.json" with { type: "json" };
 
 let failed = 0;
 
@@ -169,6 +180,41 @@ function assert(cond, msg) {
 }
 
 assert(hashString("abc") === hashString("abc"), "hash stable");
+
+// Dots sampling
+{
+  const paths = [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]];
+  const pts = samplePaths(paths, 8);
+  assert(pts.length === 8, "samplePaths returns requested count");
+  assert(Math.hypot(pts[0].x, pts[0].y) < 0.05, "samplePaths starts near path start");
+}
+
+// Dots puzzle build
+{
+  const heart = shapePaths("heart");
+  const puzzle = buildPuzzleFromPaths(heart.paths, "easy", "numbers");
+  assert(puzzle.points.length === 12, "easy puzzle has 12 dots");
+  assert(puzzle.labels[0] === "1", "number labels start at 1");
+  const letters = buildPuzzleFromPaths(heart.paths, "medium", "letters");
+  assert(letters.labels[0] === "A", "letter labels start at A");
+  assert(labelForIndex(2, "skip") === "6", "skip counting labels");
+}
+
+// Daily dots picture stable
+{
+  const d = new Date(2026, 6, 28);
+  const lib = { pictures: library.pictures };
+  const p1 = pickDailyPicture(lib, d);
+  const p2 = pickDailyPicture(lib, d);
+  assert(p1.id === p2.id, "daily dots picture stable");
+  assert(dailyDotsSeed(d) > 0, "daily dots seed positive");
+}
+
+// Generated letter paths
+{
+  const a = letterPaths("A");
+  assert(a?.paths?.[0]?.length > 4, "letter A has path points");
+}
 
 if (failed) {
   console.error(`\n${failed} failure(s)`);
