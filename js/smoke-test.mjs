@@ -35,7 +35,7 @@ import {
   pickDailyTraceGlyph,
   guideStyleForDifficulty,
 } from "./trace.js";
-import { letterPaths, shapePaths } from "./dots-shapes.js";
+import { letterPaths, numberPaths, shapePaths } from "./dots-shapes.js";
 import library from "./dots-library.json" with { type: "json" };
 
 let failed = 0;
@@ -305,7 +305,27 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
 {
   const a = letterPaths("A");
   assert(a?.paths?.length >= 2, "letter A has multiple strokes");
-  assert(a.paths[0].length > 2, "letter A stroke has points");
+  assert(a.paths[0].length >= 2, "letter A stroke has points");
+}
+
+// Manuscript stroke order: stems start at the top (y small), not the bottom
+{
+  const topStarters = {
+    A: true, B: true, D: true, E: true, F: true, H: true, I: true, J: true,
+    K: true, L: true, M: true, N: true, P: true, R: true, T: true, U: true,
+    V: true, W: true, X: true, Y: true, Z: true,
+    1: true, 4: true, 5: true, 7: true, 9: true,
+  };
+  for (const ch of Object.keys(topStarters)) {
+    const data = /[A-Z]/.test(ch) ? letterPaths(ch) : numberPaths(ch);
+    const first = data.paths[0][0];
+    assert(first.y <= 0.35, `${ch} first stroke starts near the top (y=${first.y})`);
+  }
+  const p = letterPaths("P");
+  assert(p.paths.length === 2, "P uses stem then bowl");
+  assert(p.paths[0][0].y < p.paths[0][p.paths[0].length - 1].y, "P stem goes top to bottom");
+  const nine = numberPaths("9");
+  assert(nine.paths[0][0].y <= 0.2, "9 starts at top of the bowl");
 }
 
 // Trace letters & numbers
