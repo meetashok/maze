@@ -311,21 +311,12 @@ input {
 .collision-flash {
   fill: rgba(255, 107, 74, 0.45);
   animation: flash-fade 0.22s ease-out forwards;
-}
-
-.maze-svg.shake {
-  animation: shake 0.22s ease-in-out;
+  pointer-events: none;
 }
 
 @keyframes flash-fade {
   from { opacity: 1; }
   to { opacity: 0; }
-}
-
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
 }
 
 @keyframes dash-flow {

@@ -340,16 +340,15 @@ export class MazeRenderer {
       },
       this.layers.feedback
     );
-    if (this.svg) {
-      this.svg.classList.remove("shake");
-      // force reflow
-      void this.svg.offsetWidth;
-      this.svg.classList.add("shake");
+    // Soft haptic only — do not translate the SVG (causes sideways jitter on phones).
+    try {
+      navigator.vibrate?.(12);
+    } catch {
+      /* ignore */
     }
     clearTimeout(this._collisionTimer);
     this._collisionTimer = setTimeout(() => {
       rect.remove();
-      this.svg?.classList.remove("shake");
     }, 220);
   }
 
