@@ -38,7 +38,6 @@ export function dailySeed(date = new Date()) {
 }
 
 export const DAILY_SIZE = 8;
-export const DAILY_DETOUR = 2;
 
 export const DEFAULT_START = "🐸";
 export const DEFAULT_END = "🐛";
@@ -50,17 +49,10 @@ export function difficultyLabel(size) {
   return "Expert";
 }
 
-export function detourLabel(detour) {
-  const labels = ["Short", "Winding", "Long", "Twisty"];
-  const d = Math.max(0, Math.min(3, detour | 0));
-  return labels[d];
-}
-
 export function parseUrlParams(search = window.location.search) {
   const params = new URLSearchParams(search);
   const sizeRaw = parseInt(params.get("size"), 10);
   const seedRaw = parseInt(params.get("seed"), 10);
-  const detourRaw = parseInt(params.get("detour"), 10);
   const start = params.get("start") || DEFAULT_START;
   const end = params.get("end") || DEFAULT_END;
   const daily = params.get("daily") === "1";
@@ -68,20 +60,15 @@ export function parseUrlParams(search = window.location.search) {
   const size =
     Number.isFinite(sizeRaw) && sizeRaw >= 4 && sizeRaw <= 20 ? sizeRaw : null;
   const seed = Number.isFinite(seedRaw) && seedRaw > 0 ? seedRaw >>> 0 : null;
-  const detour =
-    Number.isFinite(detourRaw) && detourRaw >= 0 && detourRaw <= 3
-      ? detourRaw
-      : null;
 
-  return { size, seed, detour, start, end, daily };
+  return { size, seed, start, end, daily };
 }
 
-export function buildShareUrl({ size, seed, start, end, daily = false, detour = 1 }) {
+export function buildShareUrl({ size, seed, start, end, daily = false }) {
   const url = new URL(window.location.href);
   url.search = "";
   url.searchParams.set("size", String(size));
   url.searchParams.set("seed", String(seed >>> 0));
-  url.searchParams.set("detour", String(Math.max(0, Math.min(3, detour | 0))));
   url.searchParams.set("start", start);
   url.searchParams.set("end", end);
   if (daily) url.searchParams.set("daily", "1");
