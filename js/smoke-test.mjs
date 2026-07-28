@@ -289,16 +289,24 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(bboxW >= 0.55, "butterfly uses most of canvas width");
 }
 
-// Scaffolded guides prototype (cat, butterfly, fish)
+// Scaffolded guides on all curated pictures (not letters/numbers)
 {
-  for (const id of ["cat", "butterfly", "fish"]) {
-    const pic = library.pictures.find((p) => p.id === id);
-    assert(Array.isArray(pic.guides) && pic.guides.length > 0, `${id} has guides`);
-    assert(pic.paths.length === 1, `${id} has a single connect outline`);
+  assert(typeof resolvePictureGuides === "function", "resolvePictureGuides exported");
+  for (const pic of library.pictures) {
+    assert(Array.isArray(pic.guides) && pic.guides.length > 0, `${pic.id} has pre-drawn guides`);
+    assert(pic.paths.length >= 1 && pic.paths.length <= 2, `${pic.id} has a clear connect outline`);
     const puzzle = buildPuzzleFromPaths(pic.paths, "medium", "numbers", { guides: pic.guides });
-    assert(puzzle.guides.length === pic.guides.length, `${id} guides survive fit`);
-    assert(puzzle.points.length >= 12, `${id} has enough outline dots`);
-    assert(resolvePictureGuides(pic).length === pic.guides.length, `${id} resolvePictureGuides`);
+    assert(puzzle.guides.length === pic.guides.length, `${pic.id} guides survive fit`);
+    assert(puzzle.points.length >= 8, `${pic.id} has enough outline dots`);
+    let close = 0;
+    for (let i = 0; i < puzzle.points.length; i++) {
+      for (let j = i + 1; j < puzzle.points.length; j++) {
+        const dx = puzzle.points[i].x - puzzle.points[j].x;
+        const dy = puzzle.points[i].y - puzzle.points[j].y;
+        if (Math.hypot(dx, dy) < 0.08) close++;
+      }
+    }
+    assert(close === 0, `${pic.id} has no overlapping dots`);
   }
 }
 
