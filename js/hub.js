@@ -1,8 +1,9 @@
 /**
- * Game Hub — tab navigation and shared shell.
+ * Game Hub — navigation and shared shell.
  *
- * Games are registered in GAMES; the switcher UI is built from that list
- * so adding a 4th–6th game is one registry entry + a panel in HTML.
+ * Games are registered in GAMES. Primary nav shows up to PRIMARY_SLOTS
+ * buttons (empty slots reserved for future games). Overflow goes behind
+ * the hamburger menu.
  *
  * URLs: /maze · /connect · /trace  (legacy #hash links still redirect)
  */
@@ -16,7 +17,18 @@ import {
   initTheme,
 } from "./common.js";
 
-/** @type {Record<string, { title: string, short: string, tagline: string, description: string, howto: string }>} */
+/** How many game buttons to show in the primary row before overflow. */
+const PRIMARY_SLOTS = 5;
+
+/**
+ * @type {Record<string, {
+ *   title: string,
+ *   short: string,
+ *   tagline: string,
+ *   description: string,
+ *   howto: string
+ * }>}
+ */
 export const GAMES = {
   mazes: {
     title: "Maze Play",
@@ -27,14 +39,14 @@ export const GAMES = {
   },
   dots: {
     title: "Connect the Dots",
-    short: "Dots",
+    short: "Connect Dots",
     tagline: "Tap the numbers in order",
     description: "Connect numbered dots to reveal hidden pictures.",
     howto: "Tap the dots in order to reveal the picture. Use hints if you get stuck!",
   },
   trace: {
     title: "Trace Letters & Numbers",
-    short: "Trace",
+    short: "Trace ABC",
     tagline: "Follow the dashes — letters & numbers",
     description: "Trace uppercase letters and numbers — practice online or print worksheets.",
     howto: "Start at the glowing green dot and follow each dashed stroke. Print packs for crayon practice!",
@@ -49,12 +61,13 @@ class GameHub {
     this.mazeApp = null;
     this.dotsApp = null;
     this.traceApp = null;
+    this.menuOpen = false;
     this.els = {};
   }
 
   async init() {
     this._cacheEls();
-    this._buildSwitcher();
+    this._buildNav();
     initTheme(this.els.themeToggle, () => {
       this.mazeApp?._redraw?.();
       this.dotsApp?._render?.();
@@ -65,7 +78,6 @@ class GameHub {
     if (!GAMES[bootRoute.game]) {
       bootRoute = { game: "mazes", params: new URLSearchParams(), legacyHash: false };
     }
-    // Normalize to /maze · /connect · /trace (and migrate legacy #hash links).
     setGameRoute(bootRoute.game, Object.fromEntries(bootRoute.params.entries()), true);
     bootRoute = parseGameRoute();
 
@@ -78,7 +90,7 @@ class GameHub {
     this.traceApp = new TraceApp();
     await this.traceApp.init();
 
-    this._bindSwitcher();
+    this._bindNav();
     this._applyRoute(bootRoute, true);
     const onRoute = () => this._applyRoute(parseGameRoute(), false);
     window.addEventListener("popstate", onRoute);
@@ -90,7 +102,10 @@ class GameHub {
       brand: $("hub-brand"),
       tagline: $("hub-tagline"),
       themeToggle: $("theme-toggle"),
-      switcher: $("game-switcher"),
+      nav: $("game-nav"),
+      primary: $("game-nav-primary"),
+      moreBtn: $("game-nav-more"),
+      menu: $("game-nav-menu"),
       panelMazes: $("game-mazes"),
       panelDots: $("game-dots"),
       panelTrace: $("game-trace"),
@@ -98,22 +113,93 @@ class GameHub {
     };
   }
 
-  _buildSwitcher() {
-    const sel = this.els.switcher;
-    if (!sel) return;
-    sel.innerHTML = "";
-    for (const id of GAME_IDS) {
-      const opt = document.createElement("option");
-      opt.value = id;
-      opt.textContent = GAMES[id].short;
-      sel.appendChild(opt);
+  _makeGameButton(id, { inMenu = false } = {}) {
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = inMenu ? "game-nav-menu-item" : "game-nav-btn";
+    btn.dataset.game = id;
+    btn.textContent = GAMES[id].short;
+    btn.setAttribute("aria-pressed", "false");
+    btn.title = GAMES[id].title;
+    btn.addEventListener("click", () => {
+      this._closeMenu();
+      this._switchGame(id);
+    });
+    return btn;
+  }
+
+  _buildNav() {
+    const { primary, moreBtn, menu } = this.els;
+    if (!primary) return;
+
+    primary.innerHTML = "";
+    primary.style.setProperty("--game-slots", String(PRIMARY_SLOTS));
+
+    const primaryIds = GAME_IDS.slice(0, PRIMARY_SLOTS);
+    const overflowIds = GAME_IDS.slice(PRIMARY_SLOTS);
+
+    for (const id of primaryIds) {
+      primary.appendChild(this._makeGameButton(id));
+    }
+    // Reserve empty slots so 4th/5th games have a clear home later.
+    for (let i = primaryIds.length; i < PRIMARY_SLOTS; i++) {
+      const slot = document.createElement("span");
+      slot.className = "game-nav-slot";
+      slot.setAttribute("aria-hidden", "true");
+      primary.appendChild(slot);
+    }
+
+    if (menu) {
+      menu.innerHTML = "";
+      for (const id of overflowIds) {
+        menu.appendChild(this._makeGameButton(id, { inMenu: true }));
+      }
+    }
+
+    if (moreBtn) {
+      const showMore = overflowIds.length > 0;
+      moreBtn.hidden = !showMore;
+      moreBtn.setAttribute("aria-expanded", "false");
     }
   }
 
-  _bindSwitcher() {
-    this.els.switcher?.addEventListener("change", () => {
-      const game = this.els.switcher.value;
-      if (GAMES[game]) this._switchGame(game);
+  _bindNav() {
+    this.els.moreBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.menuOpen ? this._closeMenu() : this._openMenu();
+    });
+    document.addEventListener("click", (e) => {
+      if (!this.menuOpen) return;
+      if (this.els.nav?.contains(e.target)) return;
+      this._closeMenu();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") this._closeMenu();
+    });
+  }
+
+  _openMenu() {
+    if (!this.els.menu || this.els.moreBtn?.hidden) return;
+    this.menuOpen = true;
+    this.els.menu.hidden = false;
+    this.els.moreBtn?.setAttribute("aria-expanded", "true");
+    this.els.moreBtn?.classList.add("is-open");
+  }
+
+  _closeMenu() {
+    this.menuOpen = false;
+    if (this.els.menu) this.els.menu.hidden = true;
+    this.els.moreBtn?.setAttribute("aria-expanded", "false");
+    this.els.moreBtn?.classList.remove("is-open");
+  }
+
+  _syncNavActive(game) {
+    const root = this.els.nav;
+    if (!root) return;
+    root.querySelectorAll("[data-game]").forEach((btn) => {
+      const on = btn.dataset.game === game;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
   }
 
@@ -139,10 +225,7 @@ class GameHub {
   _applyRoute({ game, params }, initial) {
     const next = GAMES[game] ? game : "mazes";
     this.activeGame = next;
-
-    if (this.els.switcher && this.els.switcher.value !== next) {
-      this.els.switcher.value = next;
-    }
+    this._syncNavActive(next);
 
     for (const id of GAME_IDS) {
       const panel = this._panelFor(id);

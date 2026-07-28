@@ -63,14 +63,22 @@
         </div>
       </header>
 
-      <div class="game-switcher-wrap">
-        <label class="game-switcher-label" for="game-switcher">Game</label>
-        <select id="game-switcher" class="game-switcher" aria-label="Choose a game">
-          <option value="mazes">Mazes</option>
-          <option value="dots">Dots</option>
-          <option value="trace">Trace</option>
-        </select>
-      </div>
+      <nav class="game-nav" id="game-nav" aria-label="Games">
+        <div class="game-nav-primary" id="game-nav-primary"></div>
+        <button
+          type="button"
+          class="game-nav-more"
+          id="game-nav-more"
+          hidden
+          aria-label="More games"
+          aria-haspopup="true"
+          aria-expanded="false"
+          aria-controls="game-nav-menu"
+        >
+          <span class="game-nav-more-icon" aria-hidden="true"></span>
+        </button>
+        <div class="game-nav-menu" id="game-nav-menu" hidden role="menu"></div>
+      </nav>
 
       <div id="game-mazes" class="game-panel">
       <main class="main">
