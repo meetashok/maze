@@ -484,6 +484,42 @@ input {
   color: var(--ink);
 }
 
+.detour-label[data-level="short"] {
+  background: rgba(126, 200, 227, 0.35);
+  color: #1a5f7a;
+}
+
+.detour-label[data-level="winding"] {
+  background: rgba(107, 203, 119, 0.25);
+  color: #2d6a38;
+}
+
+.detour-label[data-level="long"] {
+  background: rgba(255, 200, 87, 0.4);
+  color: #7a5600;
+}
+
+.detour-label[data-level="twisty"] {
+  background: rgba(255, 107, 74, 0.22);
+  color: #a33a22;
+}
+
+[data-theme="dark"] .detour-label[data-level="short"] {
+  color: #9dd4eb;
+}
+
+[data-theme="dark"] .detour-label[data-level="winding"] {
+  color: #9be0a4;
+}
+
+[data-theme="dark"] .detour-label[data-level="long"] {
+  color: #ffd36a;
+}
+
+[data-theme="dark"] .detour-label[data-level="twisty"] {
+  color: #ff9a82;
+}
+
 [data-theme="dark"] .difficulty[data-level="easy"] {
   color: #9be0a4;
 }

@@ -10,9 +10,11 @@ import {
   randomSeed,
   dailySeed,
   DAILY_SIZE,
+  DAILY_DETOUR,
   DEFAULT_START,
   DEFAULT_END,
   difficultyLabel,
+  detourLabel,
   parseUrlParams,
   buildShareUrl,
   copyToClipboard,
@@ -42,6 +44,7 @@ export class MazeApp {
     this.maze = null;
     this.solution = [];
     this.size = 8;
+    this.detour = 1;
     this.seed = randomSeed();
     this.startIcon = DEFAULT_START;
     this.endIcon = DEFAULT_END;
@@ -87,6 +90,8 @@ export class MazeApp {
       sizeRange: $("size-range"),
       sizeValue: $("size-value"),
       difficulty: $("difficulty-label"),
+      detourRange: $("detour-range"),
+      detourLabel: $("detour-label"),
       btnNew: $("btn-new"),
       btnDaily: $("btn-daily"),
       btnClear: $("btn-clear"),
@@ -156,10 +161,21 @@ export class MazeApp {
 
     els.sizeRange.addEventListener("input", () => {
       this.size = Number(els.sizeRange.value);
-      this._updateSizeLabel();
+      this._updateDifficultyLabels();
     });
     els.sizeRange.addEventListener("change", () => {
       this.size = Number(els.sizeRange.value);
+      this.isDaily = false;
+      this.seed = randomSeed();
+      this._loadMaze(true);
+    });
+
+    els.detourRange.addEventListener("input", () => {
+      this.detour = Number(els.detourRange.value);
+      this._updateDifficultyLabels();
+    });
+    els.detourRange.addEventListener("change", () => {
+      this.detour = Number(els.detourRange.value);
       this.isDaily = false;
       this.seed = randomSeed();
       this._loadMaze(true);
@@ -175,9 +191,11 @@ export class MazeApp {
     els.btnDaily.addEventListener("click", () => {
       this.isDaily = true;
       this.size = DAILY_SIZE;
+      this.detour = DAILY_DETOUR;
       this.seed = dailySeed();
       els.sizeRange.value = String(DAILY_SIZE);
-      this._updateSizeLabel();
+      els.detourRange.value = String(DAILY_DETOUR);
+      this._updateDifficultyLabels();
       this._loadMaze(true);
     });
 
@@ -270,16 +288,19 @@ export class MazeApp {
     if (p.daily) {
       this.isDaily = true;
       this.size = DAILY_SIZE;
+      this.detour = DAILY_DETOUR;
       this.seed = dailySeed();
     } else {
       this.size = p.size ?? 8;
+      this.detour = p.detour ?? 1;
       this.seed = p.seed ?? randomSeed();
       this.isDaily = false;
     }
     this.startIcon = p.start || DEFAULT_START;
     this.endIcon = p.end || DEFAULT_END;
     this.els.sizeRange.value = String(this.size);
-    this._updateSizeLabel();
+    this.els.detourRange.value = String(this.detour);
+    this._updateDifficultyLabels();
     this._loadMaze(true);
   }
 
@@ -294,7 +315,7 @@ export class MazeApp {
     this._syncSolutionButton();
     this.els.recordBanner.hidden = true;
 
-    this.maze = generateMaze(this.size, this.seed);
+    this.maze = generateMaze(this.size, this.seed, this.detour);
     this.solution = solveBFS(this.maze);
     this.renderer.setIcons(this.startIcon, this.endIcon);
     this.renderer.render(this.maze);
@@ -386,11 +407,14 @@ export class MazeApp {
     );
   }
 
-  _updateSizeLabel() {
+  _updateDifficultyLabels() {
     const size = Number(this.els.sizeRange.value);
+    const detour = Number(this.els.detourRange.value);
     this.els.sizeValue.textContent = `${size}×${size}`;
     this.els.difficulty.textContent = difficultyLabel(size);
     this.els.difficulty.dataset.level = difficultyLabel(size).toLowerCase();
+    this.els.detourLabel.textContent = detourLabel(detour);
+    this.els.detourLabel.dataset.level = detourLabel(detour).toLowerCase();
   }
 
   _updateDailyBadge() {
@@ -415,6 +439,7 @@ export class MazeApp {
       start: this.startIcon,
       end: this.endIcon,
       daily: this.isDaily,
+      detour: this.detour,
     });
     history.replaceState(null, "", url);
   }
@@ -426,6 +451,7 @@ export class MazeApp {
       start: this.startIcon,
       end: this.endIcon,
       daily: this.isDaily,
+      detour: this.detour,
     });
 
     // Open the native share sheet on mobile (same path as the bit.ly footer link).
@@ -685,16 +711,18 @@ export class MazeApp {
     parent.appendChild(credit);
   }
 
-  _makePrintPage({ size, seed, withSolution, pageLabel }) {
+  _makePrintPage({ size, seed, detour, withSolution, pageLabel }) {
     const page = document.createElement("section");
     page.className = "print-page";
 
     const title = document.createElement("h1");
     title.className = "print-title";
-    title.textContent = pageLabel || `Maze Puzzle — ${size}×${size}`;
+    title.textContent =
+      pageLabel ||
+      `Maze Puzzle — ${size}×${size} · ${detourLabel(detour)} detours`;
     page.appendChild(title);
 
-    const maze = generateMaze(size, seed);
+    const maze = generateMaze(size, seed, detour);
     const solution = solveBFS(maze);
     const card = document.createElement("figure");
     card.className = "print-card";
@@ -745,8 +773,9 @@ export class MazeApp {
             this._makePrintPage({
               size,
               seed,
+              detour: this.detour,
               withSolution,
-              pageLabel: `Maze Puzzle — ${size}×${size}  (#${pageIndex})`,
+              pageLabel: `Maze Puzzle — ${size}×${size} · ${detourLabel(this.detour)} detours (#${pageIndex})`,
             })
           );
         }
@@ -774,8 +803,9 @@ export class MazeApp {
           this._makePrintPage({
             size: this.size,
             seed: this.seed,
+            detour: this.detour,
             withSolution,
-            pageLabel: `Maze Puzzle — ${this.size}×${this.size}`,
+            pageLabel: `Maze Puzzle — ${this.size}×${this.size} · ${detourLabel(this.detour)} detours`,
           })
         );
       } else {
@@ -793,7 +823,7 @@ export class MazeApp {
         for (let i = 0; i < count; i++) {
           const seed = deriveSeed(this.seed, i);
           const size = Math.min(this.size, 10);
-          const maze = generateMaze(size, seed);
+          const maze = generateMaze(size, seed, this.detour);
           const solution = solveBFS(maze);
           const card = document.createElement("figure");
           card.className = "print-card";

@@ -54,7 +54,7 @@
         <section class="toolbar" aria-label="Controls">
           <div class="control-block size-block">
             <label for="size-range" class="control-label">
-              Size
+              Grid size
               <span id="size-value" class="size-value">8×8</span>
               <span id="difficulty-label" class="difficulty" data-level="medium">Medium</span>
             </label>
@@ -65,6 +65,22 @@
               min="4"
               max="20"
               value="8"
+              step="1"
+            />
+          </div>
+
+          <div class="control-block detour-block">
+            <label for="detour-range" class="control-label">
+              Detours
+              <span id="detour-label" class="detour-label difficulty" data-level="winding">Winding</span>
+            </label>
+            <input
+              id="detour-range"
+              class="size-range"
+              type="range"
+              min="0"
+              max="3"
+              value="1"
               step="1"
             />
           </div>

@@ -31,15 +31,17 @@ Configuration is stored in the query string:
 |---------|----------------------------------------------|
 | `size`  | Grid size 4–20                               |
 | `seed`  | Unsigned integer seed for generation         |
+| `detour`| Detour level 0–3 (Short / Winding / Long / Twisty) |
 | `start` | Start emoji (URL-encoded)                    |
 | `end`   | End emoji (URL-encoded)                      |
-| `daily` | `1` marks the daily maze                     |
+| `daily` | `1` marks the daily maze (8×8, Long detours) |
 
-Example: `?size=8&seed=12345&start=%F0%9F%90%B8&end=%F0%9F%90%9B`
+Example: `?size=8&seed=12345&detour=2&start=%F0%9F%90%B8&end=%F0%9F%90%9B`
 
 ## Features (v1)
 
 - Recursive-backtracking mazes (always solvable) with seeded PRNG
+- Two difficulty axes: **grid size** (4–20) and **detour level** (Short → Twisty)
 - Difficulty bands: Easy 4–6, Medium 7–10, Hard 11–14, Expert 15–20
 - Touch + mouse path tracing, wall collision feedback, celebration
 - Icon picker, share link, timer + personal bests (`localStorage`)
