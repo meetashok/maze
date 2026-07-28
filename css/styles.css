@@ -225,40 +225,55 @@ input {
   flex: 1;
 }
 
-/* —— Game hub tabs —— */
-.game-tabs {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding: 4px;
+/* —— Game hub switcher (scales to many games) —— */
+.game-switcher-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px;
   border-radius: var(--radius);
   background: var(--panel);
   border: 1px solid var(--panel-border);
 }
 
-.game-tab {
-  min-height: 48px;
-  padding: 12px 10px;
-  border: none;
-  border-radius: calc(var(--radius) - 4px);
-  background: transparent;
-  color: var(--ink-soft);
+.game-switcher-label {
+  flex: 0 0 auto;
   font-family: var(--font-display);
+  font-weight: 700;
   font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+.game-switcher {
+  flex: 1 1 auto;
+  min-height: var(--touch);
+  width: 100%;
+  max-width: 100%;
+  padding: 10px 40px 10px 14px;
+  border: 2px solid var(--btn-ghost-border);
+  border-radius: var(--radius-sm);
+  background-color: var(--floor);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%234a5c66' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.05rem;
   font-weight: 700;
   cursor: pointer;
-  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
-.game-tab.is-active,
-.game-tab[aria-selected="true"] {
-  background: var(--floor);
-  color: var(--teal-deep);
-  box-shadow: 0 2px 8px rgba(36, 48, 55, 0.1);
+.game-switcher:focus-visible {
+  outline: 3px solid rgba(31, 138, 126, 0.45);
+  outline-offset: 2px;
 }
 
-[data-theme="dark"] .game-tab.is-active {
-  color: #7fd9cc;
+/* legacy tab styles kept harmless if referenced elsewhere */
+.game-tabs {
+  display: none;
 }
 
 .game-panel[hidden] {

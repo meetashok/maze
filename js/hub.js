@@ -1,5 +1,8 @@
 /**
  * Game Hub — tab navigation and shared shell.
+ *
+ * Games are registered in GAMES; the switcher UI is built from that list
+ * so adding a 4th–6th game is one registry entry + a panel in HTML.
  */
 
 import { MazeApp } from "./ui.js";
@@ -11,29 +14,32 @@ import {
   initTheme,
 } from "./common.js";
 
-const GAMES = {
+/** @type {Record<string, { title: string, short: string, tagline: string, description: string, howto: string }>} */
+export const GAMES = {
   mazes: {
     title: "Maze Play",
+    short: "Mazes",
     tagline: "Help the frog reach the bug",
-    description: "Kid-friendly maze puzzles — trace, print, and share.",
+    description: "Kid-friendly maze puzzles — play, print, and share.",
+    howto: "Trace a path so the frog can eat the bug. Drag backward to undo.",
   },
   dots: {
     title: "Connect the Dots",
+    short: "Dots",
     tagline: "Tap the numbers in order",
     description: "Connect numbered dots to reveal hidden pictures.",
+    howto: "Tap the dots in order to reveal the picture. Use hints if you get stuck!",
   },
   trace: {
-    title: "Trace",
+    title: "Trace Letters & Numbers",
+    short: "Trace",
     tagline: "Follow the dashes — letters & numbers",
     description: "Trace uppercase letters and numbers — practice online or print worksheets.",
+    howto: "Start at the glowing green dot and follow each dashed stroke. Print packs for crayon practice!",
   },
 };
 
-const HOWTO = {
-  mazes: "Trace a path so the frog can eat the bug. Drag backward to undo.",
-  dots: "Tap the dots in order to reveal the picture. Use hints if you get stuck!",
-  trace: "Start at the glowing green dot and follow each dashed stroke. Print packs for crayon practice!",
-};
+const GAME_IDS = Object.keys(GAMES);
 
 class GameHub {
   constructor() {
@@ -46,13 +52,20 @@ class GameHub {
 
   async init() {
     this._cacheEls();
+    this._buildSwitcher();
     initTheme(this.els.themeToggle, () => {
       this.mazeApp?._redraw?.();
       this.dotsApp?._render?.();
       this.traceApp?._render?.();
     });
 
-    if (!window.location.hash) setGameHash("mazes", {}, true);
+    // Snapshot the intended route before any game init can touch the hash.
+    const bootRoute = parseGameHash();
+    if (!window.location.hash || !GAMES[bootRoute.game]) {
+      setGameHash("mazes", {}, true);
+      bootRoute.game = "mazes";
+      bootRoute.params = new URLSearchParams();
+    }
 
     this.mazeApp = new MazeApp();
     this.mazeApp.init();
@@ -63,11 +76,11 @@ class GameHub {
     this.traceApp = new TraceApp();
     await this.traceApp.init();
 
-    this._bindTabs();
-    this._applyRoute(parseGameHash(), true);
-    window.addEventListener("hashchange", () => {
-      this._applyRoute(parseGameHash(), false);
-    });
+    this._bindSwitcher();
+    this._applyRoute(bootRoute, true);
+    const onRoute = () => this._applyRoute(parseGameHash(), false);
+    window.addEventListener("hashchange", onRoute);
+    window.addEventListener("popstate", onRoute);
   }
 
   _cacheEls() {
@@ -76,9 +89,7 @@ class GameHub {
       brand: $("hub-brand"),
       tagline: $("hub-tagline"),
       themeToggle: $("theme-toggle"),
-      tabMazes: $("tab-mazes"),
-      tabDots: $("tab-dots"),
-      tabTrace: $("tab-trace"),
+      switcher: $("game-switcher"),
       panelMazes: $("game-mazes"),
       panelDots: $("game-dots"),
       panelTrace: $("game-trace"),
@@ -86,46 +97,62 @@ class GameHub {
     };
   }
 
-  _bindTabs() {
-    this.els.tabMazes?.addEventListener("click", () => this._switchGame("mazes"));
-    this.els.tabDots?.addEventListener("click", () => this._switchGame("dots"));
-    this.els.tabTrace?.addEventListener("click", () => this._switchGame("trace"));
+  _buildSwitcher() {
+    const sel = this.els.switcher;
+    if (!sel) return;
+    sel.innerHTML = "";
+    for (const id of GAME_IDS) {
+      const opt = document.createElement("option");
+      opt.value = id;
+      opt.textContent = GAMES[id].short;
+      sel.appendChild(opt);
+    }
+  }
+
+  _bindSwitcher() {
+    this.els.switcher?.addEventListener("change", () => {
+      const game = this.els.switcher.value;
+      if (GAMES[game]) this._switchGame(game);
+    });
   }
 
   _paramsForGame(game) {
-    if (game === "dots") return this.dotsApp?._syncUrl?.() || {};
-    if (game === "trace") return this.traceApp?._syncUrl?.() || {};
+    if (game === "dots") return this.dotsApp?.getShareParams?.() || this.dotsApp?._syncUrl?.() || {};
+    if (game === "trace") return this.traceApp?.getShareParams?.() || this.traceApp?._syncUrl?.() || {};
     return {};
   }
 
+  _panelFor(game) {
+    if (game === "dots") return this.els.panelDots;
+    if (game === "trace") return this.els.panelTrace;
+    return this.els.panelMazes;
+  }
+
   _switchGame(game) {
-    if (game === this.activeGame) return;
-    const params = this._paramsForGame(game);
+    if (!GAMES[game] || game === this.activeGame) return;
+    let params = {};
+    if (game === "dots") params = this.dotsApp?.getShareParams?.() || {};
+    if (game === "trace") params = this.traceApp?.getShareParams?.() || {};
     setGameHash(game, params, false);
-    this._applyRoute({ game, params: new URLSearchParams() }, false);
-    if (game === "dots") {
-      const { params: p } = parseGameHash();
-      this.dotsApp?.onHashChange(p);
-    } else if (game === "trace") {
-      const { params: p } = parseGameHash();
-      this.traceApp?.onHashChange(p);
+    const sp = new URLSearchParams();
+    for (const [k, v] of Object.entries(params)) {
+      if (v !== undefined && v !== null && v !== "") sp.set(k, String(v));
     }
+    this._applyRoute({ game, params: sp }, false);
   }
 
   _applyRoute({ game, params }, initial) {
     const next = GAMES[game] ? game : "mazes";
     this.activeGame = next;
 
-    this.els.tabMazes?.classList.toggle("is-active", next === "mazes");
-    this.els.tabDots?.classList.toggle("is-active", next === "dots");
-    this.els.tabTrace?.classList.toggle("is-active", next === "trace");
-    this.els.tabMazes?.setAttribute("aria-selected", next === "mazes" ? "true" : "false");
-    this.els.tabDots?.setAttribute("aria-selected", next === "dots" ? "true" : "false");
-    this.els.tabTrace?.setAttribute("aria-selected", next === "trace" ? "true" : "false");
+    if (this.els.switcher && this.els.switcher.value !== next) {
+      this.els.switcher.value = next;
+    }
 
-    this.els.panelMazes.hidden = next !== "mazes";
-    this.els.panelDots.hidden = next !== "dots";
-    this.els.panelTrace.hidden = next !== "trace";
+    for (const id of GAME_IDS) {
+      const panel = this._panelFor(id);
+      if (panel) panel.hidden = id !== next;
+    }
 
     const meta = GAMES[next];
     if (this.els.brand) this.els.brand.textContent = meta.title;
@@ -133,15 +160,17 @@ class GameHub {
     document.title = `${meta.title} — Puzzle Play`;
 
     if (this.els.footerHowto) {
-      this.els.footerHowto.textContent = HOWTO[next] || HOWTO.mazes;
+      this.els.footerHowto.textContent = meta.howto;
     }
 
     const desc = document.querySelector('meta[name="description"]');
     if (desc) desc.content = meta.description;
 
-    if (!initial) {
-      if (next === "dots") this.dotsApp?.onHashChange(params);
-      if (next === "trace") this.traceApp?.onHashChange(params);
+    if (next === "dots") this.dotsApp?.onHashChange(params);
+    if (next === "trace") this.traceApp?.onHashChange(params);
+    if (initial) {
+      if (next === "dots") this.dotsApp?._syncUrl?.();
+      if (next === "trace") this.traceApp?._syncUrl?.();
     }
   }
 }

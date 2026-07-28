@@ -618,18 +618,23 @@ export class TraceApp {
   }
 
   _syncUrl() {
-    const params = {
+    const params = this.getShareParams();
+    const { game } = parseGameHash();
+    if (game === "trace") setGameHash("trace", params);
+    return params;
+  }
+
+  getShareParams() {
+    return {
       glyph: this.glyph,
       kind: this.kind !== "letter" ? this.kind : undefined,
       diff: this.difficulty !== "easy" ? this.difficulty : undefined,
       daily: this.isDaily ? "1" : undefined,
     };
-    setGameHash("trace", params);
-    return params;
   }
 
   getShareUrl() {
-    return buildGameUrl("trace", this._syncUrl());
+    return buildGameUrl("trace", this.getShareParams());
   }
 
   async _share() {
