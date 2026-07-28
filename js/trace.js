@@ -12,6 +12,7 @@ import {
   mulberry32,
 } from "./common.js";
 import { letterPaths, numberPaths } from "./dots-shapes.js";
+import { getGlyphTip, encourageTipForGlyph } from "./trace-tips.js";
 
 const PRINT_CREDIT = "generated via bit.ly/mazeit";
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
@@ -168,6 +169,10 @@ export class TraceApp {
       chkNumbers: $("trace-show-numbers"),
       chkLines: $("trace-show-lines"),
       dailyChip: $("trace-daily-chip"),
+      parentGlyphLabel: $("trace-parent-glyph-label"),
+      parentSteps: $("trace-parent-steps"),
+      parentCoach: $("trace-parent-coach"),
+      parentEncourage: $("trace-parent-encourage"),
       printModal: $("trace-print-modal"),
       printClose: $("trace-print-modal-close"),
       printGo: $("trace-print-go"),
@@ -328,13 +333,43 @@ export class TraceApp {
     if (!this.els.status || !this.item) return;
     if (this.completed) {
       this.els.status.textContent = `Nice! You traced ${this.glyph}`;
-      return;
+    } else {
+      const n = this.item.paths.length;
+      this.els.status.textContent =
+        n <= 1
+          ? `Trace the ${this.kind === "number" ? "number" : "letter"} ${this.glyph}`
+          : `Stroke ${this.strokeIndex + 1} of ${n} — start at the glowing dot`;
     }
-    const n = this.item.paths.length;
-    this.els.status.textContent =
-      n <= 1
-        ? `Trace the ${this.kind === "number" ? "number" : "letter"} ${this.glyph}`
-        : `Stroke ${this.strokeIndex + 1} of ${n} — start at the glowing dot`;
+    this._updateParentTips();
+  }
+
+  _updateParentTips() {
+    const tip = getGlyphTip(this.kind, this.glyph);
+    const { parentGlyphLabel, parentSteps, parentCoach, parentEncourage } = this.els;
+    if (!parentSteps) return;
+
+    if (parentGlyphLabel) {
+      parentGlyphLabel.textContent = tip
+        ? `Tracing ${this.glyph}`
+        : `Tracing ${this.glyph}`;
+    }
+
+    parentSteps.innerHTML = "";
+    if (tip?.steps?.length) {
+      for (const step of tip.steps) {
+        const li = document.createElement("li");
+        li.textContent = step;
+        parentSteps.appendChild(li);
+      }
+    }
+
+    if (parentCoach) {
+      parentCoach.textContent = tip?.coach ? `Say with them: ${tip.coach}` : "";
+      parentCoach.hidden = !tip?.coach;
+    }
+    if (parentEncourage) {
+      parentEncourage.textContent = `Tip: ${encourageTipForGlyph(this.glyph)}`;
+    }
   }
 
   _updateDailyChip() {
