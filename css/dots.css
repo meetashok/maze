@@ -46,7 +46,7 @@
 }
 
 .dot-hit.next {
-  fill: rgba(255, 107, 74, 0.12);
+  fill: rgba(255, 107, 74, 0.08);
 }
 
 .dot {
@@ -77,9 +77,8 @@
   user-select: none;
 }
 
-.dot-label.done {
-  fill: var(--ink-soft);
-  opacity: 0.4;
+.dot-label.next {
+  fill: var(--coral-deep);
 }
 
 .dot-group.shake {

@@ -196,7 +196,7 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
 {
   const heart = shapePaths("heart");
   const puzzle = buildPuzzleFromPaths(heart.paths, "easy", "numbers");
-  assert(puzzle.points.length === 12, "easy puzzle has 12 dots");
+  assert(puzzle.points.length >= 8 && puzzle.points.length <= 12, "easy puzzle respects spacing cap");
   assert(puzzle.labels[0] === "1", "number labels start at 1");
   const letters = buildPuzzleFromPaths(heart.paths, "medium", "letters");
   assert(letters.labels[0] === "A", "letter labels start at A");
@@ -217,7 +217,7 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
 {
   const butterfly = library.pictures.find((p) => p.id === "butterfly");
   const puzzle = buildPuzzleFromPaths(butterfly.paths, "medium", "numbers");
-  assert(puzzle.points.length === 25, "butterfly medium has 25 dots");
+  assert(puzzle.points.length >= 15 && puzzle.points.length <= 25, "butterfly medium respects spacing");
 
   let closePairs = 0;
   for (let i = 0; i < puzzle.points.length; i++) {
@@ -227,7 +227,30 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
       if (Math.hypot(dx, dy) < 0.05) closePairs++;
     }
   }
-  assert(closePairs <= 2, "butterfly has few overlapping dot pairs");
+  assert(closePairs === 0, "butterfly has no overlapping dot pairs");
+
+  const flower = library.pictures.find((p) => p.id === "flower");
+  const flowerPuzzle = buildPuzzleFromPaths(flower.paths, "medium", "numbers");
+  let flowerClose = 0;
+  for (let i = 0; i < flowerPuzzle.points.length; i++) {
+    for (let j = i + 1; j < flowerPuzzle.points.length; j++) {
+      const dx = flowerPuzzle.points[i].x - flowerPuzzle.points[j].x;
+      const dy = flowerPuzzle.points[i].y - flowerPuzzle.points[j].y;
+      if (Math.hypot(dx, dy) < 0.08) flowerClose++;
+    }
+  }
+  assert(flowerClose === 0, "flower has no overlapping dots");
+
+  const letterG = buildPuzzleFromPaths(letterPaths("G").paths, "medium", "numbers", { compact: true });
+  let gClose = 0;
+  for (let i = 0; i < letterG.points.length; i++) {
+    for (let j = i + 1; j < letterG.points.length; j++) {
+      const dx = letterG.points[i].x - letterG.points[j].x;
+      const dy = letterG.points[i].y - letterG.points[j].y;
+      if (Math.hypot(dx, dy) < 0.08) gClose++;
+    }
+  }
+  assert(gClose === 0, "letter G has no overlapping dots");
 
   let tinySegs = 0;
   for (let i = 1; i < puzzle.points.length; i++) {

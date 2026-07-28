@@ -22,9 +22,9 @@ const DIFFICULTY_COUNTS = { easy: 12, medium: 25, hard: 50 };
 const INACTIVITY_HINT_MS = 5000;
 const PRINT_CREDIT = "generated via bit.ly/mazeit";
 const MIN_VERTEX_DIST = 0.005;
-const MIN_DOT_SPACING = 0.06;
-const FIT_MIN = 0.12;
-const FIT_MAX = 0.88;
+const MIN_DOT_SPACING = 0.09;
+const FIT_MIN = 0.1;
+const FIT_MAX = 0.9;
 
 function dist(a, b) {
   const dx = b.x - a.x;
@@ -132,18 +132,32 @@ function allocateCounts(lengths, total) {
       counts[i]++;
       remaining--;
     });
-  return counts;
+
+  return counts.map((c, i) =>
+    Math.min(c, Math.max(1, Math.floor(lengths[i] / MIN_DOT_SPACING)))
+  );
 }
 
 function enforceMinSpacing(points, minDist = MIN_DOT_SPACING) {
   if (!points.length) return [];
   const result = [points[0]];
   for (let i = 1; i < points.length; i++) {
-    if (dist(result[result.length - 1], points[i]) >= minDist) {
-      result.push(points[i]);
+    const pt = points[i];
+    let tooClose = false;
+    for (const existing of result) {
+      if (dist(existing, pt) < minDist) {
+        tooClose = true;
+        break;
+      }
     }
+    if (!tooClose) result.push(pt);
   }
   return result;
+}
+
+function maxDotsForPaths(paths) {
+  const totalLen = paths.reduce((sum, p) => sum + subpathLength(p), 0);
+  return Math.max(4, Math.floor(totalLen / MIN_DOT_SPACING));
 }
 
 function collectBounds(paths, points) {
@@ -184,31 +198,23 @@ export function samplePaths(paths, count) {
   if (!subpaths.length) return [];
 
   const lengths = subpaths.map((p) => Math.max(subpathLength(p), 0.001));
-  let allocations = allocateCounts(lengths, count);
+  const allocations = allocateCounts(lengths, count);
 
-  let points = [];
+  const points = [];
   for (let i = 0; i < subpaths.length; i++) {
-    points.push(...sampleSubpath(subpaths[i], allocations[i]));
-  }
-  points = dedupePoints(enforceMinSpacing(points));
-
-  let attempts = 0;
-  while (points.length < count && attempts < 8) {
-    const deficit = count - points.length;
-    const longestIdx = lengths.indexOf(Math.max(...lengths));
-    allocations[longestIdx] += deficit;
-    points = [];
-    for (let i = 0; i < subpaths.length; i++) {
-      points.push(...sampleSubpath(subpaths[i], allocations[i]));
+    for (const pt of sampleSubpath(subpaths[i], allocations[i])) {
+      let ok = true;
+      for (const existing of points) {
+        if (dist(existing, pt) < MIN_DOT_SPACING) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) points.push(pt);
     }
-    points = dedupePoints(enforceMinSpacing(points));
-    attempts++;
   }
 
-  if (points.length > count) points = points.slice(0, count);
-
-  const fitted = fitGeometry(subpaths, points);
-  return fitted.points;
+  return enforceMinSpacing(dedupePoints(points));
 }
 
 export function labelForIndex(index, type) {
@@ -225,10 +231,12 @@ function normalizePaths(rawPaths) {
   return rawPaths.map((path) => prepareSubpath(path));
 }
 
-export function buildPuzzleFromPaths(paths, difficulty, labelType = "numbers") {
-  const count = DIFFICULTY_COUNTS[difficulty] || DIFFICULTY_COUNTS.medium;
+export function buildPuzzleFromPaths(paths, difficulty, labelType = "numbers", options = {}) {
+  let count = DIFFICULTY_COUNTS[difficulty] || DIFFICULTY_COUNTS.medium;
   const norm = normalizePaths(paths);
-  const points = samplePaths(norm, count);
+  count = Math.min(count, maxDotsForPaths(norm));
+  if (options.compact) count = Math.min(count, difficulty === "hard" ? 30 : difficulty === "medium" ? 18 : 10);
+  const points = enforceMinSpacing(samplePaths(norm, count));
   const fitted = fitGeometry(norm, points);
   return {
     points: fitted.points,
@@ -515,7 +523,8 @@ export class DotsApp {
     this.els.completeBanner.hidden = true;
 
     const paths = resolvePicturePaths(this.picture);
-    this.puzzle = buildPuzzleFromPaths(paths, this.difficulty, this.labelType);
+    const compact = Boolean(this.picture?.generated);
+    this.puzzle = buildPuzzleFromPaths(paths, this.difficulty, this.labelType, { compact });
     this.puzzle.color = resolvePictureColor(this.picture);
 
     this._updateBestDisplay();
@@ -651,16 +660,54 @@ export class DotsApp {
   }
 
   _dotRadii(count) {
-    const visible = Math.max(1.8, Math.min(3.2, 4.5 - count * 0.05));
-    const hit = Math.max(4.5, visible + 2.2);
-    return { visible, hit, done: visible * 0.75 };
+    const visible = Math.max(0.9, Math.min(1.8, 2.8 - count * 0.05));
+    const hit = Math.max(3.5, visible + 1.8);
+    return { visible, hit, done: visible * 0.65 };
   }
 
-  _labelOffset(pt, centroid, dist = 5.5) {
-    const dx = pt.x - centroid.x;
-    const dy = pt.y - centroid.y;
-    const len = Math.hypot(dx, dy) || 1;
-    return { x: (dx / len) * dist, y: (dy / len) * dist };
+  _labelFontSize(count) {
+    return Math.max(2.4, Math.min(3.2, 3.8 - count * 0.045));
+  }
+
+  _bestLabelOffset(pt, index, points, centroid, tx, ty) {
+    const base = Math.max(3.5, 5 - points.length * 0.035);
+    const px = tx(pt.x);
+    const py = ty(pt.y);
+    const cx = tx(centroid.x);
+    const cy = ty(centroid.y);
+    let best = { x: 0, y: -base };
+    let bestScore = -1;
+
+    const odx = px - cx;
+    const ody = py - cy;
+    const olen = Math.hypot(odx, ody) || 1;
+    const outward = { x: odx / olen, y: ody / olen };
+
+    const candidates = [];
+    for (let d = 0; d < 8; d++) {
+      const angle = (d / 8) * Math.PI * 2;
+      candidates.push({ x: Math.cos(angle) * base, y: Math.sin(angle) * base });
+    }
+    candidates.push(
+      { x: outward.x * base, y: outward.y * base },
+      { x: -outward.x * base, y: -outward.y * base }
+    );
+
+    for (const off of candidates) {
+      const lx = px + off.x;
+      const ly = py + off.y;
+      let minDist = Infinity;
+      for (let j = 0; j < points.length; j++) {
+        if (j === index) continue;
+        const d = Math.hypot(lx - tx(points[j].x), ly - ty(points[j].y));
+        if (d < minDist) minDist = d;
+      }
+      if (minDist > bestScore) {
+        bestScore = minDist;
+        best = off;
+      }
+    }
+    return best;
   }
 
   _render() {
@@ -674,6 +721,7 @@ export class DotsApp {
     const ty = (y) => pad + y * scale;
     const count = this.puzzle.points.length;
     const radii = this._dotRadii(count);
+    const labelSize = this._labelFontSize(count);
     const centroid = this._puzzleCentroid();
     const lineCount = this.completed ? count : this.connected;
 
@@ -721,7 +769,7 @@ export class DotsApp {
       const done = i < this.connected;
       const next = i === this.connected && !this.completed;
       const pulse = next && this.hintPulse;
-      const labelOff = this._labelOffset(pt, centroid);
+      const labelOff = this._bestLabelOffset(pt, i, this.puzzle.points, centroid, tx, ty);
 
       const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       hit.setAttribute("cx", tx(pt.x));
@@ -747,11 +795,13 @@ export class DotsApp {
 
       g.appendChild(hit);
       g.appendChild(visible);
-      if (!this.completed) {
+      const showLabel = !this.completed && i >= this.connected;
+      if (showLabel) {
         const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
         label.setAttribute("x", tx(pt.x) + labelOff.x);
         label.setAttribute("y", ty(pt.y) + labelOff.y);
-        label.setAttribute("class", `dot-label${done ? " done" : ""}`);
+        label.setAttribute("font-size", String(labelSize));
+        label.setAttribute("class", `dot-label${next ? " next" : ""}`);
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("dominant-baseline", "middle");
         label.textContent = this.puzzle.labels[i];
