@@ -186,7 +186,10 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   const paths = [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]];
   const pts = samplePaths(paths, 8);
   assert(pts.length === 8, "samplePaths returns requested count");
-  assert(Math.hypot(pts[0].x, pts[0].y) < 0.05, "samplePaths starts near path start");
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  assert(Math.max(...xs) - Math.min(...xs) >= 0.5, "samplePaths spans canvas width");
+  assert(Math.max(...ys) - Math.min(...ys) >= 0.5, "samplePaths spans canvas height");
 }
 
 // Dots puzzle build
@@ -210,10 +213,40 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(dailyDotsSeed(d) > 0, "daily dots seed positive");
 }
 
+// Dots regression: spacing and clustering
+{
+  const butterfly = library.pictures.find((p) => p.id === "butterfly");
+  const puzzle = buildPuzzleFromPaths(butterfly.paths, "medium", "numbers");
+  assert(puzzle.points.length === 25, "butterfly medium has 25 dots");
+
+  let closePairs = 0;
+  for (let i = 0; i < puzzle.points.length; i++) {
+    for (let j = i + 1; j < puzzle.points.length; j++) {
+      const dx = puzzle.points[i].x - puzzle.points[j].x;
+      const dy = puzzle.points[i].y - puzzle.points[j].y;
+      if (Math.hypot(dx, dy) < 0.05) closePairs++;
+    }
+  }
+  assert(closePairs <= 2, "butterfly has few overlapping dot pairs");
+
+  let tinySegs = 0;
+  for (let i = 1; i < puzzle.points.length; i++) {
+    const a = puzzle.points[i - 1];
+    const b = puzzle.points[i];
+    if (Math.hypot(b.x - a.x, b.y - a.y) < 0.04) tinySegs++;
+  }
+  assert(tinySegs === 0, "no tiny consecutive segments");
+
+  const xs = puzzle.points.map((p) => p.x);
+  const bboxW = Math.max(...xs) - Math.min(...xs);
+  assert(bboxW >= 0.55, "butterfly uses most of canvas width");
+}
+
 // Generated letter paths
 {
   const a = letterPaths("A");
-  assert(a?.paths?.[0]?.length > 4, "letter A has path points");
+  assert(a?.paths?.length >= 2, "letter A has multiple strokes");
+  assert(a.paths[0].length > 2, "letter A stroke has points");
 }
 
 if (failed) {

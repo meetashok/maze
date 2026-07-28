@@ -21,6 +21,10 @@ const DOTS_PB_KEY = "dots-personal-bests";
 const DIFFICULTY_COUNTS = { easy: 12, medium: 25, hard: 50 };
 const INACTIVITY_HINT_MS = 5000;
 const PRINT_CREDIT = "generated via bit.ly/mazeit";
+const MIN_VERTEX_DIST = 0.005;
+const MIN_DOT_SPACING = 0.06;
+const FIT_MIN = 0.12;
+const FIT_MAX = 0.88;
 
 function dist(a, b) {
   const dx = b.x - a.x;
@@ -28,41 +32,183 @@ function dist(a, b) {
   return Math.hypot(dx, dy);
 }
 
-/** Evenly sample `count` points along polyline paths. */
-export function samplePaths(paths, count) {
-  const norm = paths.map((path) =>
-    path.map((pt) => (Array.isArray(pt) ? { x: pt[0], y: pt[1] } : pt))
-  );
-  const segments = [];
-  let total = 0;
-  for (const path of norm) {
-    for (let i = 1; i < path.length; i++) {
-      const len = dist(path[i - 1], path[i]);
-      segments.push({ a: path[i - 1], b: path[i], len });
-      total += len;
+function toPoint(pt) {
+  return Array.isArray(pt) ? { x: pt[0], y: pt[1] } : { x: pt.x, y: pt.y };
+}
+
+function cleanSubpath(path) {
+  const pts = [];
+  for (const p of path) {
+    const pt = toPoint(p);
+    if (!pts.length || dist(pts[pts.length - 1], pt) >= MIN_VERTEX_DIST) {
+      pts.push(pt);
     }
   }
-  if (!segments.length || total === 0) return norm[0]?.slice(0, count) || [];
+  return pts;
+}
 
-  const step = total / Math.max(1, count - 1);
-  const result = [];
+function prepareSubpath(path) {
+  let pts = cleanSubpath(path);
+  if (pts.length > 2 && dist(pts[0], pts[pts.length - 1]) < MIN_VERTEX_DIST) {
+    pts = pts.slice(0, -1);
+  }
+  return pts;
+}
+
+function dedupePoints(points) {
+  if (!points.length) return [];
+  const result = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    if (dist(result[result.length - 1], points[i]) >= MIN_VERTEX_DIST) {
+      result.push(points[i]);
+    }
+  }
+  if (result.length > 1 && dist(result[0], result[result.length - 1]) < MIN_VERTEX_DIST) {
+    result.pop();
+  }
+  return result;
+}
+
+function subpathLength(path) {
+  let len = 0;
+  for (let i = 1; i < path.length; i++) len += dist(path[i - 1], path[i]);
+  return len;
+}
+
+function sampleSubpath(path, count) {
+  if (!path.length) return [];
+  if (count <= 1) return [path[0]];
+  const total = subpathLength(path);
+  if (total === 0) return [path[0]];
+
+  const result = [path[0]];
+  const step = total / (count - 1);
   let segIdx = 0;
   let along = 0;
 
-  for (let i = 0; i < count; i++) {
+  for (let i = 1; i < count; i++) {
     const target = i === count - 1 ? total - 1e-6 : i * step;
-    while (segIdx < segments.length - 1 && along + segments[segIdx].len < target) {
-      along += segments[segIdx].len;
+    while (segIdx < path.length - 2 && along + dist(path[segIdx], path[segIdx + 1]) < target) {
+      along += dist(path[segIdx], path[segIdx + 1]);
       segIdx++;
     }
-    const seg = segments[segIdx];
-    const t = seg.len > 0 ? (target - along) / seg.len : 0;
-    result.push({
-      x: seg.a.x + (seg.b.x - seg.a.x) * t,
-      y: seg.a.y + (seg.b.y - seg.a.y) * t,
-    });
+    const a = path[segIdx];
+    const b = path[segIdx + 1];
+    const segLen = dist(a, b);
+    const t = segLen > 0 ? (target - along) / segLen : 0;
+    result.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
   }
   return result;
+}
+
+function allocateCounts(lengths, total) {
+  const n = lengths.length;
+  if (!n) return [];
+  if (total <= n) {
+    const order = lengths.map((len, i) => ({ len, i })).sort((a, b) => b.len - a.len);
+    const counts = Array(n).fill(0);
+    for (let i = 0; i < total; i++) counts[order[i].i] = 1;
+    return counts;
+  }
+
+  const minEach = Math.min(2, Math.floor(total / n));
+  const counts = Array(n).fill(minEach);
+  let remaining = total - minEach * n;
+  const totalLen = lengths.reduce((s, l) => s + l, 0) || 1;
+
+  const extras = lengths.map((len, i) => ({
+    i,
+    extra: (len / totalLen) * remaining,
+  }));
+  extras.forEach(({ i, extra }) => {
+    const add = Math.floor(extra);
+    counts[i] += add;
+    remaining -= add;
+  });
+  extras
+    .sort((a, b) => b.extra - Math.floor(b.extra) - (a.extra - Math.floor(a.extra)))
+    .forEach(({ i }) => {
+      if (remaining <= 0) return;
+      counts[i]++;
+      remaining--;
+    });
+  return counts;
+}
+
+function enforceMinSpacing(points, minDist = MIN_DOT_SPACING) {
+  if (!points.length) return [];
+  const result = [points[0]];
+  for (let i = 1; i < points.length; i++) {
+    if (dist(result[result.length - 1], points[i]) >= minDist) {
+      result.push(points[i]);
+    }
+  }
+  return result;
+}
+
+function collectBounds(paths, points) {
+  const all = [];
+  for (const path of paths) for (const p of path) all.push(p);
+  for (const p of points) all.push(p);
+  if (!all.length) return { minX: 0, minY: 0, maxX: 1, maxY: 1 };
+  return {
+    minX: Math.min(...all.map((p) => p.x)),
+    minY: Math.min(...all.map((p) => p.y)),
+    maxX: Math.max(...all.map((p) => p.x)),
+    maxY: Math.max(...all.map((p) => p.y)),
+  };
+}
+
+function fitGeometry(paths, points, min = FIT_MIN, max = FIT_MAX) {
+  const bounds = collectBounds(paths, points);
+  const w = bounds.maxX - bounds.minX || 1;
+  const h = bounds.maxY - bounds.minY || 1;
+  const span = max - min;
+  const scale = span / Math.max(w, h);
+  const cx = (bounds.minX + bounds.maxX) / 2;
+  const cy = (bounds.minY + bounds.maxY) / 2;
+  const mid = (min + max) / 2;
+  const map = (p) => ({
+    x: mid + (p.x - cx) * scale,
+    y: mid + (p.y - cy) * scale,
+  });
+  return {
+    paths: paths.map((path) => path.map(map)),
+    points: points.map(map),
+  };
+}
+
+/** Sample dots along separate subpaths, then fit to canvas. */
+export function samplePaths(paths, count) {
+  const subpaths = paths.map(prepareSubpath).filter((p) => p.length >= 1);
+  if (!subpaths.length) return [];
+
+  const lengths = subpaths.map((p) => Math.max(subpathLength(p), 0.001));
+  let allocations = allocateCounts(lengths, count);
+
+  let points = [];
+  for (let i = 0; i < subpaths.length; i++) {
+    points.push(...sampleSubpath(subpaths[i], allocations[i]));
+  }
+  points = dedupePoints(enforceMinSpacing(points));
+
+  let attempts = 0;
+  while (points.length < count && attempts < 8) {
+    const deficit = count - points.length;
+    const longestIdx = lengths.indexOf(Math.max(...lengths));
+    allocations[longestIdx] += deficit;
+    points = [];
+    for (let i = 0; i < subpaths.length; i++) {
+      points.push(...sampleSubpath(subpaths[i], allocations[i]));
+    }
+    points = dedupePoints(enforceMinSpacing(points));
+    attempts++;
+  }
+
+  if (points.length > count) points = points.slice(0, count);
+
+  const fitted = fitGeometry(subpaths, points);
+  return fitted.points;
 }
 
 export function labelForIndex(index, type) {
@@ -76,19 +222,18 @@ export function buildLabels(count, type) {
 }
 
 function normalizePaths(rawPaths) {
-  return rawPaths.map((path) =>
-    path.map((pt) => (Array.isArray(pt) ? { x: pt[0], y: pt[1] } : pt))
-  );
+  return rawPaths.map((path) => prepareSubpath(path));
 }
 
 export function buildPuzzleFromPaths(paths, difficulty, labelType = "numbers") {
   const count = DIFFICULTY_COUNTS[difficulty] || DIFFICULTY_COUNTS.medium;
   const norm = normalizePaths(paths);
   const points = samplePaths(norm, count);
+  const fitted = fitGeometry(norm, points);
   return {
-    points,
-    labels: buildLabels(points.length, labelType),
-    paths: norm,
+    points: fitted.points,
+    labels: buildLabels(fitted.points.length, labelType),
+    paths: fitted.paths,
   };
 }
 
@@ -498,15 +643,39 @@ export class DotsApp {
     }
   }
 
+  _puzzleCentroid() {
+    const pts = this.puzzle?.points || [];
+    if (!pts.length) return { x: 0.5, y: 0.5 };
+    const sum = pts.reduce((acc, p) => ({ x: acc.x + p.x, y: acc.y + p.y }), { x: 0, y: 0 });
+    return { x: sum.x / pts.length, y: sum.y / pts.length };
+  }
+
+  _dotRadii(count) {
+    const visible = Math.max(1.8, Math.min(3.2, 4.5 - count * 0.05));
+    const hit = Math.max(4.5, visible + 2.2);
+    return { visible, hit, done: visible * 0.75 };
+  }
+
+  _labelOffset(pt, centroid, dist = 5.5) {
+    const dx = pt.x - centroid.x;
+    const dy = pt.y - centroid.y;
+    const len = Math.hypot(dx, dy) || 1;
+    return { x: (dx / len) * dist, y: (dy / len) * dist };
+  }
+
   _render() {
     const { stage } = this.els;
     if (!stage || !this.puzzle) return;
 
     const vb = 100;
     const pad = 8;
-    const scale = (vb - pad * 2);
+    const scale = vb - pad * 2;
     const tx = (x) => pad + x * scale;
     const ty = (y) => pad + y * scale;
+    const count = this.puzzle.points.length;
+    const radii = this._dotRadii(count);
+    const centroid = this._puzzleCentroid();
+    const lineCount = this.completed ? count : this.connected;
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", `0 0 ${vb} ${vb}`);
@@ -514,24 +683,22 @@ export class DotsApp {
     svg.setAttribute("aria-label", this.picture?.name || "Connect the dots");
 
     if (this.completed) {
-      const fill = document.createElementNS("http://www.w3.org/2000/svg", "path");
-      const d = this.puzzle.paths
-        .map((path) => {
-          if (!path.length) return "";
-          let s = `M ${tx(path[0].x)} ${ty(path[0].y)}`;
-          for (let i = 1; i < path.length; i++) s += ` L ${tx(path[i].x)} ${ty(path[i].y)}`;
-          return s + " Z";
-        })
-        .join(" ");
-      fill.setAttribute("d", d);
-      fill.setAttribute("class", "dots-fill");
-      fill.setAttribute("fill", this.puzzle.color);
-      svg.appendChild(fill);
+      for (const path of this.puzzle.paths) {
+        if (path.length < 2) continue;
+        const fill = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        let d = `M ${tx(path[0].x)} ${ty(path[0].y)}`;
+        for (let i = 1; i < path.length; i++) d += ` L ${tx(path[i].x)} ${ty(path[i].y)}`;
+        if (path.length > 2) d += " Z";
+        fill.setAttribute("d", d);
+        fill.setAttribute("class", "dots-fill");
+        fill.setAttribute("fill", this.puzzle.color);
+        svg.appendChild(fill);
+      }
     }
 
     const lines = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    lines.setAttribute("class", "dots-lines");
-    for (let i = 1; i < this.connected; i++) {
+    lines.setAttribute("class", `dots-lines${this.completed ? " dots-lines-complete" : ""}`);
+    for (let i = 1; i < lineCount; i++) {
       const a = this.puzzle.points[i - 1];
       const b = this.puzzle.points[i];
       const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
@@ -554,31 +721,42 @@ export class DotsApp {
       const done = i < this.connected;
       const next = i === this.connected && !this.completed;
       const pulse = next && this.hintPulse;
+      const labelOff = this._labelOffset(pt, centroid);
 
       const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       hit.setAttribute("cx", tx(pt.x));
       hit.setAttribute("cy", ty(pt.y));
-      hit.setAttribute("r", 5.5);
+      hit.setAttribute("r", radii.hit);
       hit.setAttribute("class", `dot-hit${done ? " done" : ""}${next ? " next" : ""}${pulse ? " pulse" : ""}`);
       hit.dataset.index = String(i);
 
       const visible = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       visible.setAttribute("cx", tx(pt.x));
       visible.setAttribute("cy", ty(pt.y));
-      visible.setAttribute("r", done ? 2.2 : 3.2);
+      visible.setAttribute("r", done ? radii.done : radii.visible);
       visible.setAttribute("class", `dot${done ? " done" : ""}${next ? " next" : ""}${pulse ? " pulse" : ""}`);
       visible.setAttribute("pointer-events", "none");
-
-      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-      label.setAttribute("x", tx(pt.x));
-      label.setAttribute("y", ty(pt.y) - 5.5);
-      label.setAttribute("class", `dot-label${done ? " done" : ""}`);
-      label.setAttribute("text-anchor", "middle");
-      label.textContent = this.completed ? "" : this.puzzle.labels[i];
+      if (pulse) {
+        const anim = document.createElementNS("http://www.w3.org/2000/svg", "animate");
+        anim.setAttribute("attributeName", "opacity");
+        anim.setAttribute("values", "1;0.45;1");
+        anim.setAttribute("dur", "1s");
+        anim.setAttribute("repeatCount", "indefinite");
+        visible.appendChild(anim);
+      }
 
       g.appendChild(hit);
       g.appendChild(visible);
-      if (!this.completed) g.appendChild(label);
+      if (!this.completed) {
+        const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        label.setAttribute("x", tx(pt.x) + labelOff.x);
+        label.setAttribute("y", ty(pt.y) + labelOff.y);
+        label.setAttribute("class", `dot-label${done ? " done" : ""}`);
+        label.setAttribute("text-anchor", "middle");
+        label.setAttribute("dominant-baseline", "middle");
+        label.textContent = this.puzzle.labels[i];
+        g.appendChild(label);
+      }
       dotsG.appendChild(g);
     });
     svg.appendChild(dotsG);
