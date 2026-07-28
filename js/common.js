@@ -40,6 +40,10 @@ export function dailyDotsSeed(date = new Date()) {
   return hashString(`daily-dots:${todayDateString(date)}`);
 }
 
+export function dailyTraceSeed(date = new Date()) {
+  return hashString(`daily-trace:${todayDateString(date)}`);
+}
+
 export function formatTime(ms) {
   const totalSec = Math.floor(ms / 1000);
   const m = Math.floor(totalSec / 60);

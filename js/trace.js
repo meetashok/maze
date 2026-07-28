@@ -1,0 +1,760 @@
+/**
+ * Trace Letters & Numbers — print-first worksheets + light online practice.
+ */
+
+import { celebrate } from "./confetti.js";
+import {
+  dailyTraceSeed,
+  copyToClipboard,
+  buildGameUrl,
+  setGameHash,
+  parseGameHash,
+  mulberry32,
+} from "./common.js";
+import { letterPaths, numberPaths } from "./dots-shapes.js";
+
+const PRINT_CREDIT = "generated via bit.ly/mazeit";
+const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const DIGITS = "0123456789";
+const TRACE_THRESHOLD = 0.07;
+const STROKE_COMPLETE = 0.82;
+
+function dist(a, b) {
+  return Math.hypot(b.x - a.x, b.y - a.y);
+}
+
+function pathLength(path) {
+  let len = 0;
+  for (let i = 1; i < path.length; i++) len += dist(path[i - 1], path[i]);
+  return len;
+}
+
+/** Closest point + cumulative progress (0–1) along a polyline. */
+function nearestOnPath(path, pt) {
+  if (!path.length) return { point: pt, dist: Infinity, progress: 0 };
+  if (path.length === 1) {
+    return { point: path[0], dist: dist(path[0], pt), progress: 0 };
+  }
+  const total = pathLength(path) || 1;
+  let best = { point: path[0], dist: Infinity, progress: 0 };
+  let along = 0;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    const seg = dist(a, b) || 1e-9;
+    const t = Math.max(0, Math.min(1, ((pt.x - a.x) * (b.x - a.x) + (pt.y - a.y) * (b.y - a.y)) / (seg * seg)));
+    const proj = { x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t };
+    const d = dist(proj, pt);
+    const progress = (along + seg * t) / total;
+    if (d < best.dist) best = { point: proj, dist: d, progress };
+    along += seg;
+  }
+  return best;
+}
+
+function pathToD(path, tx, ty) {
+  if (!path.length) return "";
+  let d = `M ${tx(path[0].x)} ${ty(path[0].y)}`;
+  for (let i = 1; i < path.length; i++) d += ` L ${tx(path[i].x)} ${ty(path[i].y)}`;
+  return d;
+}
+
+function directionArrow(path, tx, ty, at = 0.18) {
+  if (path.length < 2) return null;
+  const total = pathLength(path) || 1;
+  const target = total * at;
+  let along = 0;
+  for (let i = 1; i < path.length; i++) {
+    const a = path[i - 1];
+    const b = path[i];
+    const seg = dist(a, b);
+    if (along + seg >= target || i === path.length - 1) {
+      const t = seg > 0 ? Math.min(1, (target - along) / seg) : 0;
+      const x = a.x + (b.x - a.x) * t;
+      const y = a.y + (b.y - a.y) * t;
+      const angle = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI;
+      return { x: tx(x), y: ty(y), angle };
+    }
+    along += seg;
+  }
+  return null;
+}
+
+export function resolveTraceGlyph(kind, glyph) {
+  if (kind === "number") {
+    const data = numberPaths(glyph);
+    if (!data) return null;
+    return { kind: "number", glyph: String(glyph), paths: data.paths, color: data.color, id: `number-${glyph}` };
+  }
+  const data = letterPaths(glyph);
+  if (!data) return null;
+  const ch = String(glyph).toUpperCase();
+  return { kind: "letter", glyph: ch, paths: data.paths, color: data.color, id: `letter-${ch.toLowerCase()}` };
+}
+
+export function listTraceGlyphs(kind = "letter") {
+  if (kind === "number") {
+    return [...DIGITS].map((g) => resolveTraceGlyph("number", g));
+  }
+  return [...LETTERS].map((g) => resolveTraceGlyph("letter", g));
+}
+
+export function pickDailyTraceGlyph(date = new Date()) {
+  const seed = dailyTraceSeed(date);
+  const pool = [...listTraceGlyphs("letter"), ...listTraceGlyphs("number")];
+  return pool[seed % pool.length];
+}
+
+export function guideStyleForDifficulty(difficulty) {
+  if (difficulty === "easy") {
+    return { dash: "2.2 2.4", opacity: 0.7, showArrows: true, showStrokeNumbers: true, showLines: true };
+  }
+  if (difficulty === "hard") {
+    return { dash: "1.4 2.8", opacity: 0.35, showArrows: false, showStrokeNumbers: false, showLines: false };
+  }
+  return { dash: "1.8 2.6", opacity: 0.55, showArrows: true, showStrokeNumbers: true, showLines: false };
+}
+
+export class TraceApp {
+  constructor() {
+    this.kind = "letter";
+    this.glyph = "A";
+    this.item = null;
+    this.difficulty = "easy";
+    this.showArrows = true;
+    this.showStrokeNumbers = true;
+    this.showLines = true;
+    this.isDaily = false;
+    this.strokeIndex = 0;
+    this.completed = false;
+    this.maxProgress = 0;
+    this.drawing = false;
+    this.ink = [];
+    this.inkStrokes = [];
+    this._stopCelebrate = null;
+    this._pointerId = null;
+    this.els = {};
+  }
+
+  async init() {
+    this._cacheEls();
+    this._bindControls();
+    this._buildPicker();
+    this._syncGuideTogglesFromDifficulty();
+    const { game, params } = parseGameHash();
+    if (game === "trace") {
+      this.onHashChange(params);
+    } else {
+      this._setGlyph("letter", "A", { sync: false });
+    }
+    window.addEventListener("resize", () => this._render());
+  }
+
+  _cacheEls() {
+    const $ = (id) => document.getElementById(id);
+    this.els = {
+      stage: $("trace-stage"),
+      status: $("trace-status"),
+      completeBanner: $("trace-complete-banner"),
+      picker: $("trace-picker"),
+      kindButtons: $("trace-kind"),
+      difficulty: $("trace-difficulty"),
+      btnNew: $("trace-btn-new"),
+      btnReset: $("trace-btn-reset"),
+      btnDaily: $("trace-btn-daily"),
+      btnShare: $("trace-btn-share"),
+      btnPrint: $("trace-btn-print"),
+      chkArrows: $("trace-show-arrows"),
+      chkNumbers: $("trace-show-numbers"),
+      chkLines: $("trace-show-lines"),
+      dailyChip: $("trace-daily-chip"),
+      printModal: $("trace-print-modal"),
+      printClose: $("trace-print-modal-close"),
+      printGo: $("trace-print-go"),
+      toast: $("toast"),
+    };
+  }
+
+  _bindControls() {
+    this.els.btnNew?.addEventListener("click", () => {
+      this.isDaily = false;
+      this._pickRandom();
+    });
+    this.els.btnReset?.addEventListener("click", () => this._resetPractice());
+    this.els.btnDaily?.addEventListener("click", () => this._loadDaily());
+    this.els.btnShare?.addEventListener("click", () => this._share());
+    this.els.btnPrint?.addEventListener("click", () => this._openPrintModal());
+    this.els.printClose?.addEventListener("click", () => this._closePrintModal());
+    this.els.printGo?.addEventListener("click", () => this._doPrint());
+    this.els.printModal?.addEventListener("click", (e) => {
+      if (e.target === this.els.printModal) this._closePrintModal();
+    });
+
+    this.els.kindButtons?.querySelectorAll("[data-kind]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.kind = btn.dataset.kind;
+        this._syncKindButtons();
+        this._buildPicker();
+        const first = this.kind === "number" ? "0" : "A";
+        this._setGlyph(this.kind, first);
+      });
+    });
+
+    this.els.difficulty?.querySelectorAll("[data-diff]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.difficulty = btn.dataset.diff;
+        this._syncDifficultyButtons();
+        this._syncGuideTogglesFromDifficulty();
+        this._render();
+        this._syncUrl();
+      });
+    });
+
+    this.els.chkArrows?.addEventListener("change", () => {
+      this.showArrows = this.els.chkArrows.checked;
+      this._render();
+    });
+    this.els.chkNumbers?.addEventListener("change", () => {
+      this.showStrokeNumbers = this.els.chkNumbers.checked;
+      this._render();
+    });
+    this.els.chkLines?.addEventListener("change", () => {
+      this.showLines = this.els.chkLines.checked;
+      this._render();
+    });
+  }
+
+  _syncGuideTogglesFromDifficulty() {
+    const style = guideStyleForDifficulty(this.difficulty);
+    this.showArrows = style.showArrows;
+    this.showStrokeNumbers = style.showStrokeNumbers;
+    this.showLines = style.showLines;
+    if (this.els.chkArrows) this.els.chkArrows.checked = this.showArrows;
+    if (this.els.chkNumbers) this.els.chkNumbers.checked = this.showStrokeNumbers;
+    if (this.els.chkLines) this.els.chkLines.checked = this.showLines;
+  }
+
+  _syncKindButtons() {
+    this.els.kindButtons?.querySelectorAll("[data-kind]").forEach((btn) => {
+      const on = btn.dataset.kind === this.kind;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  _syncDifficultyButtons() {
+    this.els.difficulty?.querySelectorAll("[data-diff]").forEach((btn) => {
+      const on = btn.dataset.diff === this.difficulty;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+  }
+
+  _buildPicker() {
+    const root = this.els.picker;
+    if (!root) return;
+    root.innerHTML = "";
+    const glyphs = this.kind === "number" ? DIGITS : LETTERS;
+    for (const g of glyphs) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "trace-glyph-btn";
+      btn.textContent = g;
+      btn.dataset.glyph = g;
+      btn.setAttribute("aria-label", `Trace ${g}`);
+      if (g === this.glyph) btn.classList.add("is-active");
+      btn.addEventListener("click", () => {
+        this.isDaily = false;
+        this._setGlyph(this.kind, g);
+      });
+      root.appendChild(btn);
+    }
+  }
+
+  _syncPickerActive() {
+    this.els.picker?.querySelectorAll(".trace-glyph-btn").forEach((btn) => {
+      btn.classList.toggle("is-active", btn.dataset.glyph === this.glyph);
+    });
+  }
+
+  _setGlyph(kind, glyph, { sync = true } = {}) {
+    const item = resolveTraceGlyph(kind, glyph);
+    if (!item) return;
+    this.kind = item.kind;
+    this.glyph = item.glyph;
+    this.item = item;
+    this._resetPractice(false);
+    this._syncKindButtons();
+    this._syncPickerActive();
+    this._updateDailyChip();
+    this._render();
+    if (sync) this._syncUrl();
+  }
+
+  _pickRandom() {
+    const pool = listTraceGlyphs(this.kind);
+    const rand = mulberry32((Math.random() * 0xffffffff) >>> 0);
+    const item = pool[Math.floor(rand() * pool.length)];
+    this._setGlyph(item.kind, item.glyph);
+  }
+
+  _loadDaily() {
+    const item = pickDailyTraceGlyph();
+    this.isDaily = true;
+    this.difficulty = "easy";
+    this._syncDifficultyButtons();
+    this._syncGuideTogglesFromDifficulty();
+    this.kind = item.kind;
+    this._buildPicker();
+    this._setGlyph(item.kind, item.glyph);
+  }
+
+  _resetPractice(render = true) {
+    this._stopCelebrate?.();
+    this._stopCelebrate = null;
+    this.strokeIndex = 0;
+    this.completed = false;
+    this.maxProgress = 0;
+    this.drawing = false;
+    this.ink = [];
+    this.inkStrokes = [];
+    this._pointerId = null;
+    if (this.els.completeBanner) this.els.completeBanner.hidden = true;
+    this._updateStatus();
+    if (render) this._render();
+  }
+
+  _updateStatus() {
+    if (!this.els.status || !this.item) return;
+    if (this.completed) {
+      this.els.status.textContent = `Nice! You traced ${this.glyph}`;
+      return;
+    }
+    const n = this.item.paths.length;
+    this.els.status.textContent =
+      n <= 1
+        ? `Trace the ${this.kind === "number" ? "number" : "letter"} ${this.glyph}`
+        : `Stroke ${this.strokeIndex + 1} of ${n} — start at the glowing dot`;
+  }
+
+  _updateDailyChip() {
+    if (!this.els.dailyChip) return;
+    this.els.dailyChip.hidden = !this.isDaily;
+  }
+
+  onHashChange(params) {
+    if (!(params instanceof URLSearchParams)) {
+      params = new URLSearchParams(params || "");
+    }
+    if (params.get("daily") === "1") {
+      this._loadDaily();
+      return;
+    }
+    const kind = params.get("kind") === "number" ? "number" : "letter";
+    const glyph = params.get("glyph") || (kind === "number" ? "0" : "A");
+    const diff = params.get("diff");
+    if (diff === "easy" || diff === "medium" || diff === "hard") {
+      this.difficulty = diff;
+      this._syncDifficultyButtons();
+      this._syncGuideTogglesFromDifficulty();
+    }
+    this.isDaily = false;
+    this.kind = kind;
+    this._buildPicker();
+    this._setGlyph(kind, glyph);
+  }
+
+  _guideOptions() {
+    const base = guideStyleForDifficulty(this.difficulty);
+    return {
+      ...base,
+      showArrows: this.showArrows,
+      showStrokeNumbers: this.showStrokeNumbers,
+      showLines: this.showLines,
+    };
+  }
+
+  _coords(svg, clientX, clientY) {
+    const pt = svg.createSVGPoint();
+    pt.x = clientX;
+    pt.y = clientY;
+    const ctm = svg.getScreenCTM();
+    if (!ctm) return null;
+    const local = pt.matrixTransform(ctm.inverse());
+    const pad = 10;
+    const scale = 80;
+    return {
+      x: (local.x - pad) / scale,
+      y: (local.y - pad) / scale,
+    };
+  }
+
+  _bindStagePointer(svg) {
+    const onDown = (e) => {
+      if (this.completed || !this.item) return;
+      if (e.button != null && e.button !== 0) return;
+      const pt = this._coords(svg, e.clientX, e.clientY);
+      if (!pt) return;
+      const stroke = this.item.paths[this.strokeIndex];
+      if (!stroke?.length) return;
+      const near = nearestOnPath(stroke, pt);
+      if (near.dist > TRACE_THRESHOLD * 1.4 || near.progress > 0.25) {
+        this._toast("Start at the glowing green dot");
+        return;
+      }
+      this.drawing = true;
+      this._pointerId = e.pointerId;
+      this.maxProgress = near.progress;
+      this.ink = [pt];
+      try {
+        svg.setPointerCapture(e.pointerId);
+      } catch {
+        /* ignore */
+      }
+      e.preventDefault();
+    };
+
+    const onMove = (e) => {
+      if (!this.drawing || e.pointerId !== this._pointerId) return;
+      const pt = this._coords(svg, e.clientX, e.clientY);
+      if (!pt) return;
+      const stroke = this.item.paths[this.strokeIndex];
+      const near = nearestOnPath(stroke, pt);
+      if (near.dist > TRACE_THRESHOLD * 1.6) {
+        this.drawing = false;
+        this.ink = [];
+        this._render();
+        this._toast("Stay on the dashed line");
+        return;
+      }
+      this.maxProgress = Math.max(this.maxProgress, near.progress);
+      this.ink.push(pt);
+      this._updateInkPath(svg);
+      e.preventDefault();
+    };
+
+    const onUp = (e) => {
+      if (!this.drawing || e.pointerId !== this._pointerId) return;
+      this.drawing = false;
+      this._pointerId = null;
+      if (this.maxProgress >= STROKE_COMPLETE) {
+        this.inkStrokes.push([...this.ink]);
+        this.ink = [];
+        this.maxProgress = 0;
+        this.strokeIndex += 1;
+        if (this.strokeIndex >= this.item.paths.length) {
+          this._complete();
+        } else {
+          this._updateStatus();
+          this._render();
+        }
+      } else {
+        this.ink = [];
+        this.maxProgress = 0;
+        this._render();
+        this._toast("Keep going along the line");
+      }
+      e.preventDefault();
+    };
+
+    svg.addEventListener("pointerdown", onDown);
+    svg.addEventListener("pointermove", onMove);
+    svg.addEventListener("pointerup", onUp);
+    svg.addEventListener("pointercancel", onUp);
+  }
+
+  _updateInkPath(svg) {
+    let ink = svg.querySelector(".trace-ink-live");
+    if (!ink) {
+      ink = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      ink.setAttribute("class", "trace-ink-live");
+      svg.querySelector(".trace-ink-layer")?.appendChild(ink);
+    }
+    const pad = 10;
+    const scale = 80;
+    const tx = (x) => pad + x * scale;
+    const ty = (y) => pad + y * scale;
+    ink.setAttribute("d", pathToD(this.ink, tx, ty));
+  }
+
+  _complete() {
+    this.completed = true;
+    this._updateStatus();
+    if (this.els.completeBanner) this.els.completeBanner.hidden = false;
+    this._render();
+    this._stopCelebrate = celebrate(this.els.stage);
+  }
+
+  _renderGlyphSvg({ item, options, interactive = false, compact = false, showInk = true }) {
+    const vb = 100;
+    const pad = compact ? 8 : 10;
+    const scale = vb - pad * 2;
+    const tx = (x) => pad + x * scale;
+    const ty = (y) => pad + y * scale;
+
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", `0 0 ${vb} ${vb}`);
+    svg.setAttribute("class", interactive ? "trace-svg" : "trace-print-svg");
+    if (interactive) {
+      svg.setAttribute("role", "img");
+      svg.setAttribute("aria-label", `Trace ${item.glyph}`);
+      svg.style.touchAction = "none";
+    }
+
+    if (options.showLines) {
+      const lines = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      lines.setAttribute("class", "trace-ruled-lines");
+      for (const y of [0.12, 0.5, 0.88]) {
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", tx(0.08));
+        line.setAttribute("y1", ty(y));
+        line.setAttribute("x2", tx(0.92));
+        line.setAttribute("y2", ty(y));
+        line.setAttribute("class", y === 0.5 ? "trace-rule mid" : "trace-rule");
+        lines.appendChild(line);
+      }
+      svg.appendChild(lines);
+    }
+
+    const guides = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    guides.setAttribute("class", "trace-guides");
+    item.paths.forEach((path, i) => {
+      const done = interactive && i < this.strokeIndex;
+      const active = interactive && i === this.strokeIndex && !this.completed;
+      const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      p.setAttribute("d", pathToD(path, tx, ty));
+      p.setAttribute(
+        "class",
+        `trace-guide${done ? " done" : ""}${active ? " active" : ""}${this.completed ? " complete" : ""}`
+      );
+      p.setAttribute("stroke-dasharray", options.dash);
+      p.style.opacity = String(done || this.completed ? 0.25 : options.opacity);
+      guides.appendChild(p);
+
+      if (options.showStrokeNumbers && path[0]) {
+        const num = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        num.setAttribute("x", tx(path[0].x) - 3.5);
+        num.setAttribute("y", ty(path[0].y) - 3.5);
+        num.setAttribute("class", "trace-stroke-num");
+        num.textContent = String(i + 1);
+        guides.appendChild(num);
+      }
+
+      if (options.showArrows) {
+        const arrow = directionArrow(path, tx, ty);
+        if (arrow) {
+          const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+          g.setAttribute("transform", `translate(${arrow.x} ${arrow.y}) rotate(${arrow.angle})`);
+          const tri = document.createElementNS("http://www.w3.org/2000/svg", "path");
+          tri.setAttribute("d", "M 0 0 L -3.2 -2.2 L -3.2 2.2 Z");
+          tri.setAttribute("class", "trace-arrow");
+          g.appendChild(tri);
+          guides.appendChild(g);
+        }
+      }
+    });
+    svg.appendChild(guides);
+
+    if (showInk) {
+      const inkLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      inkLayer.setAttribute("class", "trace-ink-layer");
+      for (const stroke of this.inkStrokes) {
+        const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        p.setAttribute("d", pathToD(stroke, tx, ty));
+        p.setAttribute("class", "trace-ink");
+        inkLayer.appendChild(p);
+      }
+      if (this.ink.length) {
+        const live = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        live.setAttribute("d", pathToD(this.ink, tx, ty));
+        live.setAttribute("class", "trace-ink-live");
+        inkLayer.appendChild(live);
+      }
+      svg.appendChild(inkLayer);
+    }
+
+    const starts = document.createElementNS("http://www.w3.org/2000/svg", "g");
+    starts.setAttribute("class", "trace-starts");
+    item.paths.forEach((path, i) => {
+      if (!path[0]) return;
+      if (interactive && (i < this.strokeIndex || this.completed)) return;
+      const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      c.setAttribute("cx", tx(path[0].x));
+      c.setAttribute("cy", ty(path[0].y));
+      c.setAttribute("r", interactive && i === this.strokeIndex ? 2.4 : 1.8);
+      c.setAttribute(
+        "class",
+        `trace-start${interactive && i === this.strokeIndex ? " current" : ""}`
+      );
+      starts.appendChild(c);
+    });
+    svg.appendChild(starts);
+
+    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+    label.setAttribute("x", vb / 2);
+    label.setAttribute("y", compact ? 7 : 6);
+    label.setAttribute("text-anchor", "middle");
+    label.setAttribute("class", "trace-glyph-label");
+    label.textContent = item.glyph;
+    svg.appendChild(label);
+
+    return svg;
+  }
+
+  _render() {
+    const { stage } = this.els;
+    if (!stage || !this.item) return;
+    const options = this._guideOptions();
+    const svg = this._renderGlyphSvg({
+      item: this.item,
+      options,
+      interactive: true,
+      showInk: true,
+    });
+    this._bindStagePointer(svg);
+    stage.innerHTML = "";
+    stage.appendChild(svg);
+    this._updateStatus();
+  }
+
+  _syncUrl() {
+    const params = {
+      glyph: this.glyph,
+      kind: this.kind !== "letter" ? this.kind : undefined,
+      diff: this.difficulty !== "easy" ? this.difficulty : undefined,
+      daily: this.isDaily ? "1" : undefined,
+    };
+    setGameHash("trace", params);
+    return params;
+  }
+
+  getShareUrl() {
+    return buildGameUrl("trace", this._syncUrl());
+  }
+
+  async _share() {
+    const url = this.getShareUrl();
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Trace Letters & Numbers",
+          text: `Practice tracing ${this.glyph}!`,
+          url,
+        });
+        return;
+      } catch {
+        /* fall through */
+      }
+    }
+    await copyToClipboard(url);
+    this._toast("Link copied!");
+  }
+
+  _toast(msg) {
+    const t = this.els.toast;
+    if (!t) return;
+    t.textContent = msg;
+    t.hidden = false;
+    t.classList.add("show");
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      t.classList.remove("show");
+      t.hidden = true;
+    }, 1800);
+  }
+
+  _openPrintModal() {
+    this.els.printModal.hidden = false;
+    this.els.printModal.setAttribute("aria-hidden", "false");
+  }
+
+  _closePrintModal() {
+    this.els.printModal.hidden = true;
+    this.els.printModal.setAttribute("aria-hidden", "true");
+  }
+
+  _doPrint() {
+    const layout =
+      document.querySelector('input[name="trace-print-layout"]:checked')?.value || "single";
+    const sheet = document.getElementById("print-sheet");
+    sheet.innerHTML = "";
+    sheet.hidden = false;
+    document.body.classList.add("printing");
+
+    const options = this._guideOptions();
+
+    const makePage = (title, items, gridClass) => {
+      const page = document.createElement("section");
+      page.className = "print-page";
+      const h = document.createElement("h1");
+      h.className = "print-title";
+      h.textContent = title;
+      page.appendChild(h);
+      if (gridClass) {
+        const grid = document.createElement("div");
+        grid.className = gridClass;
+        for (const item of items) {
+          const card = document.createElement("figure");
+          card.className = "print-card";
+          const cap = document.createElement("figcaption");
+          cap.textContent = item.glyph;
+          card.appendChild(cap);
+          card.appendChild(
+            this._renderGlyphSvg({ item, options, interactive: false, compact: true, showInk: false })
+          );
+          grid.appendChild(card);
+        }
+        page.appendChild(grid);
+      } else {
+        page.appendChild(
+          this._renderGlyphSvg({
+            item: items[0],
+            options,
+            interactive: false,
+            compact: false,
+            showInk: false,
+          })
+        );
+      }
+      const credit = document.createElement("p");
+      credit.className = "print-credit";
+      credit.textContent = PRINT_CREDIT;
+      page.appendChild(credit);
+      return page;
+    };
+
+    if (layout === "pack-letters") {
+      const all = listTraceGlyphs("letter");
+      for (let i = 0; i < all.length; i += 4) {
+        const chunk = all.slice(i, i + 4);
+        sheet.appendChild(
+          makePage(`Trace Letters — ${chunk[0].glyph}–${chunk[chunk.length - 1].glyph}`, chunk, "print-trace-grid")
+        );
+      }
+    } else if (layout === "pack-numbers") {
+      const all = listTraceGlyphs("number");
+      sheet.appendChild(makePage("Trace Numbers — 0–9", all, "print-trace-grid-numbers"));
+    } else if (layout === "worksheet4" || layout === "worksheet6") {
+      const count = layout === "worksheet4" ? 4 : 6;
+      const pool = listTraceGlyphs(this.kind);
+      const idx = pool.findIndex((p) => p.glyph === this.glyph);
+      const items = [];
+      for (let i = 0; i < count; i++) items.push(pool[(Math.max(0, idx) + i) % pool.length]);
+      sheet.appendChild(
+        makePage(`Trace Practice — ${count} glyphs`, items, "print-trace-grid")
+      );
+    } else {
+      sheet.appendChild(makePage(`Trace ${this.glyph}`, [this.item], null));
+    }
+
+    this._closePrintModal();
+    requestAnimationFrame(() => {
+      window.print();
+      setTimeout(() => {
+        document.body.classList.remove("printing");
+        sheet.hidden = true;
+        sheet.innerHTML = "";
+      }, 500);
+    });
+  }
+}
