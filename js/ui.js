@@ -126,10 +126,19 @@ export class MazeApp {
     this._applyTheme(theme);
     if (this.els.themeToggle) {
       this.els.themeToggle.checked = theme === THEME_LIGHT;
-      this.els.themeToggle.addEventListener("change", () => {
+      const onToggle = () => {
         const next = this.els.themeToggle.checked ? THEME_LIGHT : THEME_DARK;
         this._applyTheme(next);
         localStorage.setItem(THEME_KEY, next);
+      };
+      this.els.themeToggle.addEventListener("change", onToggle);
+      // Desktop: ensure label clicks always flip even if checkbox focus is odd
+      this.els.themeToggle.closest(".theme-swap")?.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          this.els.themeToggle.checked = !this.els.themeToggle.checked;
+          onToggle();
+        }
       });
     }
   }
