@@ -4,6 +4,7 @@
 
 import { MazeApp } from "./ui.js";
 import { DotsApp } from "./dots.js";
+import { TraceApp } from "./trace.js";
 import {
   parseGameHash,
   setGameHash,
@@ -21,6 +22,17 @@ const GAMES = {
     tagline: "Tap the numbers in order",
     description: "Connect numbered dots to reveal hidden pictures.",
   },
+  trace: {
+    title: "Trace",
+    tagline: "Follow the dashes — letters & numbers",
+    description: "Trace uppercase letters and numbers — practice online or print worksheets.",
+  },
+};
+
+const HOWTO = {
+  mazes: "Trace a path so the frog can eat the bug. Drag backward to undo.",
+  dots: "Tap the dots in order to reveal the picture. Use hints if you get stuck!",
+  trace: "Start at the glowing green dot and follow each dashed stroke. Print packs for crayon practice!",
 };
 
 class GameHub {
@@ -28,6 +40,7 @@ class GameHub {
     this.activeGame = "mazes";
     this.mazeApp = null;
     this.dotsApp = null;
+    this.traceApp = null;
     this.els = {};
   }
 
@@ -36,6 +49,7 @@ class GameHub {
     initTheme(this.els.themeToggle, () => {
       this.mazeApp?._redraw?.();
       this.dotsApp?._render?.();
+      this.traceApp?._render?.();
     });
 
     if (!window.location.hash) setGameHash("mazes", {}, true);
@@ -45,6 +59,9 @@ class GameHub {
 
     this.dotsApp = new DotsApp();
     await this.dotsApp.init();
+
+    this.traceApp = new TraceApp();
+    await this.traceApp.init();
 
     this._bindTabs();
     this._applyRoute(parseGameHash(), true);
@@ -61,8 +78,10 @@ class GameHub {
       themeToggle: $("theme-toggle"),
       tabMazes: $("tab-mazes"),
       tabDots: $("tab-dots"),
+      tabTrace: $("tab-trace"),
       panelMazes: $("game-mazes"),
       panelDots: $("game-dots"),
+      panelTrace: $("game-trace"),
       footerHowto: $("footer-howto"),
     };
   }
@@ -70,17 +89,26 @@ class GameHub {
   _bindTabs() {
     this.els.tabMazes?.addEventListener("click", () => this._switchGame("mazes"));
     this.els.tabDots?.addEventListener("click", () => this._switchGame("dots"));
+    this.els.tabTrace?.addEventListener("click", () => this._switchGame("trace"));
+  }
+
+  _paramsForGame(game) {
+    if (game === "dots") return this.dotsApp?._syncUrl?.() || {};
+    if (game === "trace") return this.traceApp?._syncUrl?.() || {};
+    return {};
   }
 
   _switchGame(game) {
     if (game === this.activeGame) return;
-    const params =
-      game === "dots" ? this.dotsApp?._syncUrl?.() || {} : {};
+    const params = this._paramsForGame(game);
     setGameHash(game, params, false);
     this._applyRoute({ game, params: new URLSearchParams() }, false);
     if (game === "dots") {
       const { params: p } = parseGameHash();
       this.dotsApp?.onHashChange(p);
+    } else if (game === "trace") {
+      const { params: p } = parseGameHash();
+      this.traceApp?.onHashChange(p);
     }
   }
 
@@ -90,11 +118,14 @@ class GameHub {
 
     this.els.tabMazes?.classList.toggle("is-active", next === "mazes");
     this.els.tabDots?.classList.toggle("is-active", next === "dots");
+    this.els.tabTrace?.classList.toggle("is-active", next === "trace");
     this.els.tabMazes?.setAttribute("aria-selected", next === "mazes" ? "true" : "false");
     this.els.tabDots?.setAttribute("aria-selected", next === "dots" ? "true" : "false");
+    this.els.tabTrace?.setAttribute("aria-selected", next === "trace" ? "true" : "false");
 
     this.els.panelMazes.hidden = next !== "mazes";
     this.els.panelDots.hidden = next !== "dots";
+    this.els.panelTrace.hidden = next !== "trace";
 
     const meta = GAMES[next];
     if (this.els.brand) this.els.brand.textContent = meta.title;
@@ -102,17 +133,15 @@ class GameHub {
     document.title = `${meta.title} — Puzzle Play`;
 
     if (this.els.footerHowto) {
-      this.els.footerHowto.textContent =
-        next === "dots"
-          ? "Tap the dots in order to reveal the picture. Use hints if you get stuck!"
-          : "Trace a path so the frog can eat the bug. Drag backward to undo.";
+      this.els.footerHowto.textContent = HOWTO[next] || HOWTO.mazes;
     }
 
     const desc = document.querySelector('meta[name="description"]');
     if (desc) desc.content = meta.description;
 
-    if (next === "dots" && !initial) {
-      this.dotsApp?.onHashChange(params);
+    if (!initial) {
+      if (next === "dots") this.dotsApp?.onHashChange(params);
+      if (next === "trace") this.traceApp?.onHashChange(params);
     }
   }
 }

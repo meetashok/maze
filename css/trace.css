@@ -1,0 +1,200 @@
+/* Trace Letters & Numbers */
+
+.trace-panel {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.trace-stage {
+  width: min(100%, 560px);
+  aspect-ratio: 1;
+  border-radius: calc(var(--radius) + 4px);
+  box-shadow: var(--shadow);
+  background: var(--floor);
+  overflow: hidden;
+  touch-action: none;
+}
+
+.trace-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+}
+
+.trace-status {
+  margin: 0;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-align: center;
+  min-height: 1.4em;
+}
+
+.trace-complete-banner {
+  margin: 0;
+  padding: 12px 16px;
+  border-radius: var(--radius-sm);
+  background: rgba(107, 203, 119, 0.25);
+  color: var(--ink);
+  font-weight: 800;
+  text-align: center;
+}
+
+.trace-daily-chip {
+  display: inline-block;
+  margin: 0;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 200, 87, 0.35);
+  font-weight: 800;
+  font-size: 0.85rem;
+}
+
+.trace-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(44px, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 560px;
+}
+
+.trace-glyph-btn {
+  appearance: none;
+  border: 2px solid var(--line);
+  background: var(--floor);
+  color: var(--ink);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.25rem;
+  min-height: 48px;
+  cursor: pointer;
+}
+
+.trace-glyph-btn.is-active,
+.trace-glyph-btn[aria-pressed="true"] {
+  border-color: var(--coral);
+  background: rgba(255, 107, 74, 0.12);
+  color: var(--coral-deep);
+}
+
+.trace-rule {
+  stroke: var(--line);
+  stroke-width: 0.45;
+  opacity: 0.7;
+}
+
+.trace-rule.mid {
+  stroke-dasharray: 1.5 1.5;
+  opacity: 0.55;
+}
+
+.trace-guide {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.trace-guide.active {
+  stroke: var(--path);
+  stroke-width: 2;
+}
+
+.trace-guide.done,
+.trace-guide.complete {
+  stroke: var(--ink-soft);
+}
+
+.trace-stroke-num {
+  font-family: var(--font-display);
+  font-size: 3.2px;
+  font-weight: 800;
+  fill: var(--coral-deep);
+}
+
+.trace-arrow {
+  fill: var(--coral);
+  opacity: 0.85;
+}
+
+.trace-start {
+  fill: var(--path);
+  stroke: var(--floor);
+  stroke-width: 0.5;
+}
+
+.trace-start.current {
+  fill: #2ecc71;
+  filter: drop-shadow(0 0 1.2px rgba(46, 204, 113, 0.8));
+}
+
+.trace-ink,
+.trace-ink-live {
+  fill: none;
+  stroke: var(--coral-deep);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  pointer-events: none;
+}
+
+.trace-glyph-label {
+  font-family: var(--font-display);
+  font-size: 4.5px;
+  font-weight: 800;
+  fill: var(--ink-soft);
+  opacity: 0.45;
+}
+
+.trace-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+}
+
+@media print {
+  .print-trace-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+
+  .print-trace-grid-numbers {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .print-trace-grid .trace-print-svg,
+  .print-trace-grid-numbers .trace-print-svg {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+  }
+
+  .trace-print-svg .trace-guide {
+    stroke: #222;
+    stroke-width: 1.5;
+  }
+
+  .trace-print-svg .trace-start {
+    fill: #222;
+  }
+
+  .trace-print-svg .trace-arrow {
+    fill: #444;
+  }
+
+  .trace-print-svg .trace-stroke-num {
+    fill: #333;
+  }
+
+  .trace-print-svg .trace-rule {
+    stroke: #bbb;
+  }
+}

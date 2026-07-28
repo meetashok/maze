@@ -10,6 +10,7 @@ import {
   hashString,
   dailySeed,
   dailyDotsSeed,
+  dailyTraceSeed,
   deriveSeed,
   formatTime,
 } from "./common.js";
@@ -25,6 +26,12 @@ import {
   labelForIndex,
   pickDailyPicture,
 } from "./dots.js";
+import {
+  resolveTraceGlyph,
+  listTraceGlyphs,
+  pickDailyTraceGlyph,
+  guideStyleForDifficulty,
+} from "./trace.js";
 import { letterPaths, shapePaths } from "./dots-shapes.js";
 import library from "./dots-library.json" with { type: "json" };
 
@@ -270,6 +277,25 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   const a = letterPaths("A");
   assert(a?.paths?.length >= 2, "letter A has multiple strokes");
   assert(a.paths[0].length > 2, "letter A stroke has points");
+}
+
+// Trace letters & numbers
+{
+  const a = resolveTraceGlyph("letter", "a");
+  assert(a?.glyph === "A" && a.paths.length >= 2, "resolveTraceGlyph letter A");
+  const five = resolveTraceGlyph("number", "5");
+  assert(five?.glyph === "5" && five.paths.length >= 1, "resolveTraceGlyph number 5");
+  assert(listTraceGlyphs("letter").length === 26, "26 letters");
+  assert(listTraceGlyphs("number").length === 10, "10 digits");
+  const d = new Date(2026, 6, 28);
+  const g1 = pickDailyTraceGlyph(d);
+  const g2 = pickDailyTraceGlyph(d);
+  assert(g1.id === g2.id, "daily trace glyph stable");
+  assert(dailyTraceSeed(d) > 0, "daily trace seed positive");
+  const easy = guideStyleForDifficulty("easy");
+  assert(easy.showArrows && easy.showStrokeNumbers, "easy guides show arrows and numbers");
+  const hard = guideStyleForDifficulty("hard");
+  assert(!hard.showArrows && !hard.showLines, "hard guides are minimal");
 }
 
 if (failed) {

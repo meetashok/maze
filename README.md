@@ -1,6 +1,6 @@
 # Puzzle Play
 
-Kid-friendly puzzle games for ages 3–8. **Maze Play** — help the frog reach the bug. **Connect the Dots** — tap numbered dots to reveal pictures. Pure client-side HTML, CSS, and JavaScript. No backend.
+Kid-friendly puzzle games for ages 3–8. **Maze Play**, **Connect the Dots**, and **Trace** (letters & numbers). Pure client-side HTML, CSS, and JavaScript. No backend.
 
 **Live:** enable [GitHub Pages](https://pages.github.com/) on this repo (`Settings → Pages → Deploy from a branch → main → / (root)`).
 
@@ -16,6 +16,11 @@ Kid-friendly puzzle games for ages 3–8. **Maze Play** — help the frog reach 
 2. Labels: numbers, letters, or skip counting.
 3. Daily puzzle, hints, auto-hint after idle, print worksheets, share links.
 
+### Trace
+1. Pick an uppercase letter or digit and follow the dashed strokes (start at the green dot).
+2. Easy / medium / hard guides, optional arrows, stroke numbers, and handwriting lines.
+3. Print one glyph, 4/6 worksheets, or full A–Z / 0–9 packs for crayon practice.
+
 ## Open locally
 
 ```bash
@@ -30,6 +35,9 @@ npx --yes serve .
 | `?size=8&seed=123` | Maze config (query string) |
 | `#dots?pic=cat&diff=medium` | Dots game with picture and difficulty |
 | `#dots?daily=1` | Daily connect-the-dots puzzle |
+| `#trace?glyph=A` | Trace letter A |
+| `#trace?kind=number&glyph=5` | Trace number 5 |
+| `#trace?daily=1` | Daily trace glyph |
 
 Maze example: `?size=8&seed=12345#mazes`  
 Dots example: `#dots?pic=cat&diff=easy&labels=letters`
@@ -41,7 +49,8 @@ Dots example: `#dots?pic=cat&diff=easy&labels=letters`
 ├── index.html           # shell + tab navigation
 ├── css/
 │   ├── styles.css       # shared + maze styles
-│   └── dots.css         # connect-the-dots styles
+│   ├── dots.css         # connect-the-dots styles
+│   └── trace.css        # trace letters/numbers styles
 ├── js/
 │   ├── hub.js           # tab router
 │   ├── common.js        # shared PRNG, timer, storage, hash routing
@@ -50,6 +59,7 @@ Dots example: `#dots?pic=cat&diff=easy&labels=letters`
 │   ├── dots.js          # connect-the-dots game
 │   ├── dots-shapes.js   # algorithmic letters/numbers/shapes
 │   ├── dots-library.json
+│   ├── trace.js         # trace letters & numbers
 │   └── smoke-test.mjs
 └── README.md
 ```
