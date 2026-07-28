@@ -192,7 +192,11 @@ export class MazeApp {
       this._paintOverlays();
     });
 
-    els.btnShare.addEventListener("click", () => this._share());
+    els.btnShare.addEventListener("click", (e) => {
+      e.preventDefault();
+      // Must stay in the user-gesture turn for mobile share sheets.
+      void this._share();
+    });
 
     els.btnIcons.addEventListener("click", () => this._openModal(els.iconModal));
     els.iconModalClose.addEventListener("click", () => this._closeModal(els.iconModal));
