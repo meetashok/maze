@@ -554,6 +554,22 @@ input {
   color: var(--ink-soft);
 }
 
+.footer-share {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.footer-share a {
+  color: var(--teal-deep);
+  text-underline-offset: 2px;
+  font-weight: 800;
+}
+
+.footer-share a:hover {
+  color: var(--coral);
+}
+
 .footer-meta {
   font-size: 0.85rem;
   font-weight: 600;
@@ -603,6 +619,87 @@ input {
   padding: 18px;
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.25);
   animation: slide-up 0.25s ease-out;
+}
+
+.modal-card-wide {
+  width: min(100%, 480px);
+}
+
+.print-mode-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.print-mode-tab {
+  min-height: 44px;
+  border-radius: 12px;
+  border: 2px solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
+  color: var(--ink);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.print-mode-tab.is-active {
+  background: rgba(31, 138, 126, 0.18);
+  border-color: var(--teal);
+  color: var(--teal-deep);
+}
+
+.print-bulk-help {
+  margin: 0 0 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.bulk-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.bulk-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.bulk-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.8rem;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.bulk-select,
+.bulk-count {
+  min-height: 44px;
+  border-radius: 10px;
+  border: 2px solid var(--btn-ghost-border);
+  background: var(--emoji-btn-bg);
+  color: var(--ink);
+  padding: 0 10px;
+  font-weight: 700;
+}
+
+.bulk-remove {
+  min-width: 0;
+  padding: 0 12px;
+  box-shadow: none;
+}
+
+.bulk-total {
+  margin: 10px 0 0;
+  text-align: center;
+  font-weight: 800;
+  color: var(--teal-deep);
 }
 
 @keyframes slide-up {
@@ -763,6 +860,20 @@ input {
     display: none !important;
   }
 
+  .print-page {
+    page-break-after: always;
+    break-after: page;
+    display: flex;
+    flex-direction: column;
+    min-height: 9.5in;
+    box-sizing: border-box;
+  }
+
+  .print-page:last-child {
+    page-break-after: auto;
+    break-after: auto;
+  }
+
   .print-title {
     font-family: Georgia, "Times New Roman", serif;
     font-size: 18pt;
@@ -777,7 +888,8 @@ input {
     justify-items: center;
   }
 
-  .print-sheet[data-layout="single"] .print-maze-grid {
+  .print-sheet[data-layout="single"] .print-maze-grid,
+  .print-sheet[data-layout="bulk"] .print-maze-grid {
     grid-template-columns: 1fr;
   }
 
@@ -796,6 +908,11 @@ input {
     page-break-inside: avoid;
     width: 100%;
     text-align: center;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 
   .print-card figcaption {
@@ -807,12 +924,21 @@ input {
   .print-maze {
     width: 100% !important;
     height: auto !important;
-    max-height: 9in;
+    max-height: 8in;
   }
 
   .print-sheet[data-layout="grid4"] .print-maze,
   .print-sheet[data-layout="grid6"] .print-maze {
     max-height: 3.2in;
+  }
+
+  .print-credit {
+    margin-top: auto;
+    padding-top: 12pt;
+    text-align: center;
+    font-size: 9pt;
+    color: #666;
+    font-family: Georgia, "Times New Roman", serif;
   }
 
   .maze-bg {

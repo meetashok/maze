@@ -95,6 +95,15 @@
 
       <footer class="footer">
         <p class="footer-howto">Trace a path so the frog can eat the bug. Drag backward to undo.</p>
+        <p class="footer-share">
+          Share the tool with others:
+          <a
+            id="share-shortlink"
+            href="https://bit.ly/mazeit"
+            data-share-url="https://bit.ly/mazeit"
+            >bit.ly/mazeit</a
+          >
+        </p>
         <p class="footer-meta">
           Open source on
           <a href="https://github.com/meetashok/maze" target="_blank" rel="noopener noreferrer">GitHub</a>
@@ -117,11 +126,21 @@
 
     <!-- Print options -->
     <div id="print-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="print-modal-title">
-      <div class="modal-card">
+      <div class="modal-card modal-card-wide">
         <header class="modal-header">
           <h2 id="print-modal-title">Print maze</h2>
           <button type="button" id="print-modal-close" class="btn btn-icon" aria-label="Close">×</button>
         </header>
+
+        <div class="print-mode-tabs" role="tablist" aria-label="Print mode">
+          <button type="button" class="print-mode-tab is-active" data-print-mode="quick" role="tab" aria-selected="true">
+            Quick
+          </button>
+          <button type="button" class="print-mode-tab" data-print-mode="bulk" role="tab" aria-selected="false">
+            Bulk
+          </button>
+        </div>
+
         <fieldset class="print-fieldset">
           <legend>Solution</legend>
           <label class="radio">
@@ -133,21 +152,32 @@
             With solution
           </label>
         </fieldset>
-        <fieldset class="print-fieldset">
-          <legend>Layout</legend>
-          <label class="radio">
-            <input type="radio" name="print-layout" value="single" checked />
-            One large maze
-          </label>
-          <label class="radio">
-            <input type="radio" name="print-layout" value="4" />
-            Worksheet — 4 mazes (2×2)
-          </label>
-          <label class="radio">
-            <input type="radio" name="print-layout" value="6" />
-            Worksheet — 6 mazes (2×3)
-          </label>
-        </fieldset>
+
+        <div id="print-panel-quick" class="print-panel">
+          <fieldset class="print-fieldset">
+            <legend>Layout</legend>
+            <label class="radio">
+              <input type="radio" name="print-layout" value="single" checked />
+              One large maze
+            </label>
+            <label class="radio">
+              <input type="radio" name="print-layout" value="4" />
+              Worksheet — 4 mazes (2×2)
+            </label>
+            <label class="radio">
+              <input type="radio" name="print-layout" value="6" />
+              Worksheet — 6 mazes (2×3)
+            </label>
+          </fieldset>
+        </div>
+
+        <div id="print-panel-bulk" class="print-panel" hidden>
+          <p class="print-bulk-help">Add grid sizes and how many of each. Every maze prints on its own page.</p>
+          <div id="bulk-rows" class="bulk-rows" aria-live="polite"></div>
+          <button type="button" id="bulk-add-row" class="btn btn-secondary btn-block">Add grid size</button>
+          <p id="bulk-total" class="bulk-total">Total pages: 1</p>
+        </div>
+
         <button type="button" id="print-go" class="btn btn-primary btn-block">Print</button>
       </div>
     </div>

@@ -32,6 +32,8 @@ const ICON_OPTIONS = [
 const THEME_KEY = "maze-theme";
 const THEME_LIGHT = "light";
 const THEME_DARK = "dark";
+const SHARE_SHORT_URL = "https://bit.ly/mazeit";
+const PRINT_CREDIT = "generated via bit.ly/mazeit";
 
 const HINT_STEPS = 4;
 
@@ -106,8 +108,16 @@ export class MazeApp {
       printModalClose: $("print-modal-close"),
       printGo: $("print-go"),
       printSheet: $("print-sheet"),
+      printPanelQuick: $("print-panel-quick"),
+      printPanelBulk: $("print-panel-bulk"),
+      bulkRows: $("bulk-rows"),
+      bulkAddRow: $("bulk-add-row"),
+      bulkTotal: $("bulk-total"),
+      shareShortlink: $("share-shortlink"),
       brandDate: $("brand-date"),
     };
+    this.printMode = "quick";
+    this.bulkEntries = [{ size: 8, count: 1 }];
   }
 
   _initTheme() {
@@ -179,12 +189,40 @@ export class MazeApp {
       if (e.target === els.iconModal) this._closeModal(els.iconModal);
     });
 
-    els.btnPrint.addEventListener("click", () => this._openModal(els.printModal));
+    els.btnPrint.addEventListener("click", () => {
+      this.printMode = this.printMode || "quick";
+      if (!this.bulkEntries?.length) {
+        this.bulkEntries = [{ size: this.size || 8, count: 1 }];
+      } else {
+        this.bulkEntries[0].size = this.bulkEntries[0].size || this.size || 8;
+      }
+      this._syncPrintModeUI();
+      this._renderBulkRows();
+      this._openModal(els.printModal);
+    });
     els.printModalClose.addEventListener("click", () => this._closeModal(els.printModal));
     els.printModal.addEventListener("click", (e) => {
       if (e.target === els.printModal) this._closeModal(els.printModal);
     });
     els.printGo.addEventListener("click", () => this._doPrint());
+
+    els.printModal.querySelectorAll(".print-mode-tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        this.printMode = tab.dataset.printMode === "bulk" ? "bulk" : "quick";
+        this._syncPrintModeUI();
+      });
+    });
+
+    els.bulkAddRow?.addEventListener("click", () => {
+      const nextSize = Math.min(20, (this.bulkEntries.at(-1)?.size || 8) + 1);
+      this.bulkEntries.push({ size: nextSize, count: 1 });
+      this._renderBulkRows();
+    });
+
+    els.shareShortlink?.addEventListener("click", (e) => {
+      e.preventDefault();
+      this._shareToolLink();
+    });
 
     els.timerToggle.addEventListener("change", () => {
       this.timerEnabled = els.timerToggle.checked;
@@ -380,6 +418,29 @@ export class MazeApp {
     }
   }
 
+  async _shareToolLink() {
+    const url = SHARE_SHORT_URL;
+    const shareData = {
+      title: "Maze Play",
+      text: "Help the frog reach the bug — try Maze Play!",
+      url,
+    };
+    try {
+      if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+    }
+    try {
+      await copyToClipboard(url);
+      this._toast("Link copied: bit.ly/mazeit");
+    } catch {
+      window.open(url, "_blank", "noopener,noreferrer");
+    }
+  }
+
   _toast(msg) {
     const t = this.els.toast;
     t.textContent = msg;
@@ -480,60 +541,217 @@ export class MazeApp {
     modal.setAttribute("aria-hidden", "true");
   }
 
+  _syncPrintModeUI() {
+    const isBulk = this.printMode === "bulk";
+    this.els.printModal.querySelectorAll(".print-mode-tab").forEach((tab) => {
+      const active = tab.dataset.printMode === this.printMode;
+      tab.classList.toggle("is-active", active);
+      tab.setAttribute("aria-selected", active ? "true" : "false");
+    });
+    if (this.els.printPanelQuick) this.els.printPanelQuick.hidden = isBulk;
+    if (this.els.printPanelBulk) this.els.printPanelBulk.hidden = !isBulk;
+  }
+
+  _renderBulkRows() {
+    const host = this.els.bulkRows;
+    if (!host) return;
+    if (!this.bulkEntries.length) {
+      this.bulkEntries = [{ size: this.size || 8, count: 1 }];
+    }
+    host.innerHTML = "";
+    this.bulkEntries.forEach((entry, index) => {
+      const row = document.createElement("div");
+      row.className = "bulk-row";
+
+      const sizeLabel = document.createElement("label");
+      sizeLabel.className = "bulk-field";
+      sizeLabel.innerHTML = `<span>Size</span>`;
+      const sizeSelect = document.createElement("select");
+      sizeSelect.className = "bulk-select";
+      sizeSelect.setAttribute("aria-label", `Grid size for row ${index + 1}`);
+      for (let s = 4; s <= 20; s++) {
+        const opt = document.createElement("option");
+        opt.value = String(s);
+        opt.textContent = `${s}×${s} (${difficultyLabel(s)})`;
+        if (s === entry.size) opt.selected = true;
+        sizeSelect.appendChild(opt);
+      }
+      sizeSelect.addEventListener("change", () => {
+        this.bulkEntries[index].size = Number(sizeSelect.value);
+        this._updateBulkTotal();
+      });
+      sizeLabel.appendChild(sizeSelect);
+
+      const countLabel = document.createElement("label");
+      countLabel.className = "bulk-field";
+      countLabel.innerHTML = `<span>Copies</span>`;
+      const countInput = document.createElement("input");
+      countInput.type = "number";
+      countInput.className = "bulk-count";
+      countInput.min = "1";
+      countInput.max = "50";
+      countInput.value = String(entry.count);
+      countInput.setAttribute("aria-label", `Number of mazes for row ${index + 1}`);
+      countInput.addEventListener("change", () => {
+        const n = Math.max(1, Math.min(50, parseInt(countInput.value, 10) || 1));
+        countInput.value = String(n);
+        this.bulkEntries[index].count = n;
+        this._updateBulkTotal();
+      });
+      countLabel.appendChild(countInput);
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "btn btn-ghost bulk-remove";
+      removeBtn.textContent = "Remove";
+      removeBtn.disabled = this.bulkEntries.length <= 1;
+      removeBtn.addEventListener("click", () => {
+        if (this.bulkEntries.length <= 1) return;
+        this.bulkEntries.splice(index, 1);
+        this._renderBulkRows();
+      });
+
+      row.appendChild(sizeLabel);
+      row.appendChild(countLabel);
+      row.appendChild(removeBtn);
+      host.appendChild(row);
+    });
+    this._updateBulkTotal();
+  }
+
+  _updateBulkTotal() {
+    const total = this.bulkEntries.reduce((sum, e) => sum + (e.count || 0), 0);
+    if (this.els.bulkTotal) {
+      this.els.bulkTotal.textContent = `Total pages: ${total}`;
+    }
+  }
+
+  _appendPrintCredit(parent) {
+    const credit = document.createElement("p");
+    credit.className = "print-credit";
+    credit.textContent = PRINT_CREDIT;
+    parent.appendChild(credit);
+  }
+
+  _makePrintPage({ size, seed, withSolution, pageLabel }) {
+    const page = document.createElement("section");
+    page.className = "print-page";
+
+    const title = document.createElement("h1");
+    title.className = "print-title";
+    title.textContent = pageLabel || `Maze Puzzle — ${size}×${size}`;
+    page.appendChild(title);
+
+    const maze = generateMaze(size, seed);
+    const solution = solveBFS(maze);
+    const card = document.createElement("figure");
+    card.className = "print-card";
+    const caption = document.createElement("figcaption");
+    caption.textContent = `${this.startIcon} → ${this.endIcon}`;
+    const svg = MazeRenderer.createStaticSvg(maze, {
+      startIcon: this.startIcon,
+      endIcon: this.endIcon,
+      showSolution: withSolution,
+      solution,
+      compact: false,
+    });
+    card.appendChild(caption);
+    card.appendChild(svg);
+    page.appendChild(card);
+    this._appendPrintCredit(page);
+    return page;
+  }
+
   _doPrint() {
     const withSolution = document.querySelector(
       'input[name="print-solution"]:checked'
     )?.value === "yes";
-    const layout = document.querySelector(
-      'input[name="print-layout"]:checked'
-    )?.value || "single";
 
     const sheet = this.els.printSheet;
     sheet.innerHTML = "";
     sheet.hidden = false;
     document.body.classList.add("printing");
 
-    const count = layout === "single" ? 1 : layout === "4" ? 4 : 6;
-    sheet.dataset.layout = layout === "single" ? "single" : layout === "4" ? "grid4" : "grid6";
+    if (this.printMode === "bulk") {
+      sheet.dataset.layout = "bulk";
+      let pageIndex = 0;
+      for (const entry of this.bulkEntries) {
+        const size = Math.max(4, Math.min(20, entry.size | 0));
+        const count = Math.max(1, Math.min(50, entry.count | 0));
+        for (let i = 0; i < count; i++) {
+          const seed = deriveSeed(this.seed, pageIndex);
+          pageIndex += 1;
+          sheet.appendChild(
+            this._makePrintPage({
+              size,
+              seed,
+              withSolution,
+              pageLabel: `Maze Puzzle — ${size}×${size}  (#${pageIndex})`,
+            })
+          );
+        }
+      }
+      if (!pageIndex) {
+        this._toast("Add at least one maze to print");
+        sheet.innerHTML = "";
+        sheet.hidden = true;
+        document.body.classList.remove("printing");
+        return;
+      }
+    } else {
+      const layout = document.querySelector(
+        'input[name="print-layout"]:checked'
+      )?.value || "single";
+      const count = layout === "single" ? 1 : layout === "4" ? 4 : 6;
+      sheet.dataset.layout = layout === "single" ? "single" : layout === "4" ? "grid4" : "grid6";
 
-    const title = document.createElement("h1");
-    title.className = "print-title";
-    title.textContent =
-      count === 1
-        ? `Maze Puzzle — ${this.size}×${this.size}`
-        : `Maze Worksheets — ${count} puzzles`;
-    sheet.appendChild(title);
+      if (count === 1) {
+        sheet.appendChild(
+          this._makePrintPage({
+            size: this.size,
+            seed: this.seed,
+            withSolution,
+            pageLabel: `Maze Puzzle — ${this.size}×${this.size}`,
+          })
+        );
+      } else {
+        const page = document.createElement("section");
+        page.className = "print-page print-page-worksheet";
+        const title = document.createElement("h1");
+        title.className = "print-title";
+        title.textContent = `Maze Worksheets — ${count} puzzles`;
+        page.appendChild(title);
 
-    const grid = document.createElement("div");
-    grid.className = "print-maze-grid";
-    sheet.appendChild(grid);
+        const grid = document.createElement("div");
+        grid.className = "print-maze-grid";
+        page.appendChild(grid);
 
-    for (let i = 0; i < count; i++) {
-      const seed = count === 1 ? this.seed : deriveSeed(this.seed, i);
-      const size = count === 1 ? this.size : Math.min(this.size, 10);
-      const maze = generateMaze(size, seed);
-      const solution = solveBFS(maze);
-      const card = document.createElement("figure");
-      card.className = "print-card";
-      const caption = document.createElement("figcaption");
-      caption.textContent =
-        count === 1
-          ? `${this.startIcon} → ${this.endIcon}`
-          : `#${i + 1}  ${this.startIcon} → ${this.endIcon}`;
-      const svg = MazeRenderer.createStaticSvg(maze, {
-        startIcon: this.startIcon,
-        endIcon: this.endIcon,
-        showSolution: withSolution,
-        solution,
-        compact: count > 1,
-      });
-      card.appendChild(caption);
-      card.appendChild(svg);
-      grid.appendChild(card);
+        for (let i = 0; i < count; i++) {
+          const seed = deriveSeed(this.seed, i);
+          const size = Math.min(this.size, 10);
+          const maze = generateMaze(size, seed);
+          const solution = solveBFS(maze);
+          const card = document.createElement("figure");
+          card.className = "print-card";
+          const caption = document.createElement("figcaption");
+          caption.textContent = `#${i + 1}  ${this.startIcon} → ${this.endIcon}`;
+          const svg = MazeRenderer.createStaticSvg(maze, {
+            startIcon: this.startIcon,
+            endIcon: this.endIcon,
+            showSolution: withSolution,
+            solution,
+            compact: true,
+          });
+          card.appendChild(caption);
+          card.appendChild(svg);
+          grid.appendChild(card);
+        }
+        this._appendPrintCredit(page);
+        sheet.appendChild(page);
+      }
     }
 
     this._closeModal(this.els.printModal);
-    // Allow layout to paint before print
     requestAnimationFrame(() => {
       window.print();
     });
