@@ -10,9 +10,11 @@ import {
   randomSeed,
   dailySeed,
   DAILY_SIZE,
+  DAILY_DETOUR,
   DEFAULT_START,
   DEFAULT_END,
   difficultyLabel,
+  detourLabel,
   parseUrlParams,
   buildShareUrl,
   copyToClipboard,
@@ -42,6 +44,7 @@ export class MazeApp {
     this.maze = null;
     this.solution = [];
     this.size = 8;
+    this.detour = 1;
     this.seed = randomSeed();
     this.startIcon = DEFAULT_START;
     this.endIcon = DEFAULT_END;
@@ -73,7 +76,6 @@ export class MazeApp {
     });
     this.tracer.attach(this.els.mazeStage);
 
-    this._initTheme();
     this._bindControls();
     this._buildIconGrid();
     this._loadFromUrlOrDefault();
@@ -87,6 +89,7 @@ export class MazeApp {
       sizeRange: $("size-range"),
       sizeValue: $("size-value"),
       difficulty: $("difficulty-label"),
+      detourButtons: $("detour-buttons"),
       btnNew: $("btn-new"),
       btnDaily: $("btn-daily"),
       btnClear: $("btn-clear"),
@@ -165,6 +168,18 @@ export class MazeApp {
       this._loadMaze(true);
     });
 
+    els.detourButtons?.querySelectorAll(".detour-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const next = Number(btn.dataset.detour);
+        if (next === this.detour) return;
+        this.detour = next;
+        this.isDaily = false;
+        this.seed = randomSeed();
+        this._syncDetourButtons();
+        this._loadMaze(true);
+      });
+    });
+
     els.btnNew.addEventListener("click", () => {
       this.isDaily = false;
       this.seed = randomSeed();
@@ -175,9 +190,11 @@ export class MazeApp {
     els.btnDaily.addEventListener("click", () => {
       this.isDaily = true;
       this.size = DAILY_SIZE;
+      this.detour = DAILY_DETOUR;
       this.seed = dailySeed();
       els.sizeRange.value = String(DAILY_SIZE);
       this._updateSizeLabel();
+      this._syncDetourButtons();
       this._loadMaze(true);
     });
 
@@ -270,9 +287,11 @@ export class MazeApp {
     if (p.daily) {
       this.isDaily = true;
       this.size = DAILY_SIZE;
+      this.detour = DAILY_DETOUR;
       this.seed = dailySeed();
     } else {
       this.size = p.size ?? 8;
+      this.detour = p.detour ?? 1;
       this.seed = p.seed ?? randomSeed();
       this.isDaily = false;
     }
@@ -280,6 +299,7 @@ export class MazeApp {
     this.endIcon = p.end || DEFAULT_END;
     this.els.sizeRange.value = String(this.size);
     this._updateSizeLabel();
+    this._syncDetourButtons();
     this._loadMaze(true);
   }
 
@@ -294,7 +314,7 @@ export class MazeApp {
     this._syncSolutionButton();
     this.els.recordBanner.hidden = true;
 
-    this.maze = generateMaze(this.size, this.seed);
+    this.maze = generateMaze(this.size, this.seed, this.detour);
     this.solution = solveBFS(this.maze);
     this.renderer.setIcons(this.startIcon, this.endIcon);
     this.renderer.render(this.maze);
@@ -393,6 +413,13 @@ export class MazeApp {
     this.els.difficulty.dataset.level = difficultyLabel(size).toLowerCase();
   }
 
+  _syncDetourButtons() {
+    this.els.detourButtons?.querySelectorAll(".detour-btn").forEach((btn) => {
+      const active = Number(btn.dataset.detour) === this.detour;
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
+  }
+
   _updateDailyBadge() {
     if (this.els.brandDate) {
       this.els.brandDate.hidden = !this.isDaily;
@@ -415,6 +442,7 @@ export class MazeApp {
       start: this.startIcon,
       end: this.endIcon,
       daily: this.isDaily,
+      detour: this.detour,
     });
     history.replaceState(null, "", url);
   }
@@ -426,6 +454,7 @@ export class MazeApp {
       start: this.startIcon,
       end: this.endIcon,
       daily: this.isDaily,
+      detour: this.detour,
     });
 
     // Open the native share sheet on mobile (same path as the bit.ly footer link).
@@ -685,16 +714,17 @@ export class MazeApp {
     parent.appendChild(credit);
   }
 
-  _makePrintPage({ size, seed, withSolution, pageLabel }) {
+  _makePrintPage({ size, seed, detour, withSolution, pageLabel }) {
     const page = document.createElement("section");
     page.className = "print-page";
 
     const title = document.createElement("h1");
     title.className = "print-title";
-    title.textContent = pageLabel || `Maze Puzzle — ${size}×${size}`;
+    title.textContent =
+      pageLabel || `Maze Puzzle — ${size}×${size} · ${detourLabel(detour)}`;
     page.appendChild(title);
 
-    const maze = generateMaze(size, seed);
+    const maze = generateMaze(size, seed, detour);
     const solution = solveBFS(maze);
     const card = document.createElement("figure");
     card.className = "print-card";
@@ -745,8 +775,9 @@ export class MazeApp {
             this._makePrintPage({
               size,
               seed,
+              detour: this.detour,
               withSolution,
-              pageLabel: `Maze Puzzle — ${size}×${size}  (#${pageIndex})`,
+              pageLabel: `Maze Puzzle — ${size}×${size} · ${detourLabel(this.detour)} (#${pageIndex})`,
             })
           );
         }
@@ -774,8 +805,9 @@ export class MazeApp {
           this._makePrintPage({
             size: this.size,
             seed: this.seed,
+            detour: this.detour,
             withSolution,
-            pageLabel: `Maze Puzzle — ${this.size}×${this.size}`,
+            pageLabel: `Maze Puzzle — ${this.size}×${this.size} · ${detourLabel(this.detour)}`,
           })
         );
       } else {
@@ -793,7 +825,7 @@ export class MazeApp {
         for (let i = 0; i < count; i++) {
           const seed = deriveSeed(this.seed, i);
           const size = Math.min(this.size, 10);
-          const maze = generateMaze(size, seed);
+          const maze = generateMaze(size, seed, this.detour);
           const solution = solveBFS(maze);
           const card = document.createElement("figure");
           card.className = "print-card";
@@ -823,7 +855,6 @@ export class MazeApp {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-  const app = new MazeApp();
-  app.init();
-  window.__mazeApp = app;
+  /* Initialized by hub.js */
 });
+

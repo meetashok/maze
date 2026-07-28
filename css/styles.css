@@ -225,6 +225,53 @@ input {
   flex: 1;
 }
 
+/* —— Game hub tabs —— */
+.game-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 4px;
+  border-radius: var(--radius);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+.game-tab {
+  min-height: 48px;
+  padding: 12px 10px;
+  border: none;
+  border-radius: calc(var(--radius) - 4px);
+  background: transparent;
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+}
+
+.game-tab.is-active,
+.game-tab[aria-selected="true"] {
+  background: var(--floor);
+  color: var(--teal-deep);
+  box-shadow: 0 2px 8px rgba(36, 48, 55, 0.1);
+}
+
+[data-theme="dark"] .game-tab.is-active {
+  color: #7fd9cc;
+}
+
+.game-panel[hidden] {
+  display: none !important;
+}
+
+.game-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 14px;
+}
+
 /* —— Maze —— */
 .maze-panel {
   position: relative;
@@ -503,6 +550,47 @@ input {
   cursor: pointer;
 }
 
+.detour-buttons {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.detour-btn {
+  min-height: 40px;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 2px solid var(--btn-ghost-border);
+  background: var(--btn-ghost-bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1.15;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.detour-btn:hover {
+  border-color: rgba(42, 157, 143, 0.45);
+}
+
+.detour-btn[aria-pressed="true"] {
+  background: rgba(42, 157, 143, 0.18);
+  border-color: var(--teal);
+  color: var(--teal-deep);
+}
+
+[data-theme="dark"] .detour-btn[aria-pressed="true"] {
+  color: #7fd9cc;
+}
+
+@media (max-width: 380px) {
+  .detour-buttons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .timer-row {
   display: flex;
   align-items: center;
@@ -579,6 +667,25 @@ input {
   font-weight: 600;
   color: var(--ink-soft);
   opacity: 0.9;
+}
+
+.footer-credits {
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--ink-soft);
+  opacity: 0.85;
+  max-width: 36rem;
+  margin-inline: auto;
+}
+
+.footer-credits a {
+  color: var(--teal-deep);
+  text-underline-offset: 2px;
+}
+
+.footer-credits a:hover {
+  color: var(--coral);
 }
 
 .footer-meta a {

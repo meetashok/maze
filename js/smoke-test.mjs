@@ -4,16 +4,29 @@
  * (or: node js/smoke-test.mjs with import assertions)
  */
 
-import { generateMaze, solveBFS, canMove, getHintSteps } from "./maze.js";
+import { generateMaze, solveBFS, canMove, getHintSteps, analyzeMaze } from "./maze.js";
 import {
   mulberry32,
   hashString,
   dailySeed,
+  dailyDotsSeed,
   deriveSeed,
-  difficultyLabel,
   formatTime,
+} from "./common.js";
+import {
+  difficultyLabel,
+  detourLabel,
   DAILY_SIZE,
+  DAILY_DETOUR,
 } from "./utils.js";
+import {
+  samplePaths,
+  buildPuzzleFromPaths,
+  labelForIndex,
+  pickDailyPicture,
+} from "./dots.js";
+import { letterPaths, shapePaths } from "./dots-shapes.js";
+import library from "./dots-library.json" with { type: "json" };
 
 let failed = 0;
 
@@ -75,6 +88,21 @@ function assert(cond, msg) {
   }
 }
 
+// Detour determinism
+{
+  const a = generateMaze(10, 42, 2);
+  const b = generateMaze(10, 42, 2);
+  assert(
+    JSON.stringify(a.cells) === JSON.stringify(b.cells),
+    "same seed+size+detour => same maze"
+  );
+  const c = generateMaze(10, 42, 0);
+  assert(
+    JSON.stringify(a.cells) !== JSON.stringify(c.cells),
+    "different detour => different maze"
+  );
+}
+
 // Daily seed stable
 {
   const d = new Date(2026, 6, 28); // local Jul 28 2026
@@ -82,6 +110,7 @@ function assert(cond, msg) {
   const s2 = dailySeed(d);
   assert(s1 === s2 && s1 > 0, "daily seed stable");
   assert(DAILY_SIZE === 8, "daily size is 8");
+  assert(DAILY_DETOUR === 2, "daily detour is 2 (Tricky)");
 }
 
 // PRNG range
@@ -104,12 +133,42 @@ function assert(cond, msg) {
   assert(hints[0].r === sol[1].r && hints[0].c === sol[1].c, "hint follows solution");
 }
 
-// Difficulty + format
+// Higher detour tends to more dead ends and junctions
+{
+  const n = 12;
+  const samples = 20;
+  let sumSimpleDead = 0;
+  let sumExpertDead = 0;
+  let sumSimpleJunctions = 0;
+  let sumExpertJunctions = 0;
+  for (let i = 0; i < samples; i++) {
+    const simple = analyzeMaze(generateMaze(n, 1000 + i, 0));
+    const expert = analyzeMaze(generateMaze(n, 1000 + i, 3));
+    sumSimpleDead += simple.deadEnds;
+    sumExpertDead += expert.deadEnds;
+    sumSimpleJunctions += simple.junctions;
+    sumExpertJunctions += expert.junctions;
+  }
+  assert(
+    sumExpertDead / samples > sumSimpleDead / samples,
+    "expert style averages more dead ends than simple"
+  );
+  assert(
+    sumExpertJunctions / samples > sumSimpleJunctions / samples,
+    "expert style averages more junctions than simple"
+  );
+}
+
+// Labels
 {
   assert(difficultyLabel(4) === "Easy", "easy");
   assert(difficultyLabel(8) === "Medium", "medium");
   assert(difficultyLabel(12) === "Hard", "hard");
   assert(difficultyLabel(20) === "Expert", "expert");
+  assert(detourLabel(0) === "Simple", "simple style");
+  assert(detourLabel(1) === "Branchy", "branchy style");
+  assert(detourLabel(2) === "Tricky", "tricky style");
+  assert(detourLabel(3) === "Expert", "expert style");
   assert(formatTime(65000) === "1:05.0", "formatTime");
 }
 
@@ -121,6 +180,97 @@ function assert(cond, msg) {
 }
 
 assert(hashString("abc") === hashString("abc"), "hash stable");
+
+// Dots sampling
+{
+  const paths = [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]];
+  const pts = samplePaths(paths, 8);
+  assert(pts.length === 8, "samplePaths returns requested count");
+  const xs = pts.map((p) => p.x);
+  const ys = pts.map((p) => p.y);
+  assert(Math.max(...xs) - Math.min(...xs) >= 0.5, "samplePaths spans canvas width");
+  assert(Math.max(...ys) - Math.min(...ys) >= 0.5, "samplePaths spans canvas height");
+}
+
+// Dots puzzle build
+{
+  const heart = shapePaths("heart");
+  const puzzle = buildPuzzleFromPaths(heart.paths, "easy", "numbers");
+  assert(puzzle.points.length >= 8 && puzzle.points.length <= 12, "easy puzzle respects spacing cap");
+  assert(puzzle.labels[0] === "1", "number labels start at 1");
+  const letters = buildPuzzleFromPaths(heart.paths, "medium", "letters");
+  assert(letters.labels[0] === "A", "letter labels start at A");
+  assert(labelForIndex(2, "skip") === "6", "skip counting labels");
+}
+
+// Daily dots picture stable
+{
+  const d = new Date(2026, 6, 28);
+  const lib = { pictures: library.pictures };
+  const p1 = pickDailyPicture(lib, d);
+  const p2 = pickDailyPicture(lib, d);
+  assert(p1.id === p2.id, "daily dots picture stable");
+  assert(dailyDotsSeed(d) > 0, "daily dots seed positive");
+}
+
+// Dots regression: spacing and clustering
+{
+  const butterfly = library.pictures.find((p) => p.id === "butterfly");
+  const puzzle = buildPuzzleFromPaths(butterfly.paths, "medium", "numbers");
+  assert(puzzle.points.length >= 15 && puzzle.points.length <= 25, "butterfly medium respects spacing");
+
+  let closePairs = 0;
+  for (let i = 0; i < puzzle.points.length; i++) {
+    for (let j = i + 1; j < puzzle.points.length; j++) {
+      const dx = puzzle.points[i].x - puzzle.points[j].x;
+      const dy = puzzle.points[i].y - puzzle.points[j].y;
+      if (Math.hypot(dx, dy) < 0.05) closePairs++;
+    }
+  }
+  assert(closePairs === 0, "butterfly has no overlapping dot pairs");
+
+  const flower = library.pictures.find((p) => p.id === "flower");
+  const flowerPuzzle = buildPuzzleFromPaths(flower.paths, "medium", "numbers");
+  let flowerClose = 0;
+  for (let i = 0; i < flowerPuzzle.points.length; i++) {
+    for (let j = i + 1; j < flowerPuzzle.points.length; j++) {
+      const dx = flowerPuzzle.points[i].x - flowerPuzzle.points[j].x;
+      const dy = flowerPuzzle.points[i].y - flowerPuzzle.points[j].y;
+      if (Math.hypot(dx, dy) < 0.08) flowerClose++;
+    }
+  }
+  assert(flowerClose === 0, "flower has no overlapping dots");
+
+  const letterG = buildPuzzleFromPaths(letterPaths("G").paths, "medium", "numbers", { compact: true });
+  let gClose = 0;
+  for (let i = 0; i < letterG.points.length; i++) {
+    for (let j = i + 1; j < letterG.points.length; j++) {
+      const dx = letterG.points[i].x - letterG.points[j].x;
+      const dy = letterG.points[i].y - letterG.points[j].y;
+      if (Math.hypot(dx, dy) < 0.08) gClose++;
+    }
+  }
+  assert(gClose === 0, "letter G has no overlapping dots");
+
+  let tinySegs = 0;
+  for (let i = 1; i < puzzle.points.length; i++) {
+    const a = puzzle.points[i - 1];
+    const b = puzzle.points[i];
+    if (Math.hypot(b.x - a.x, b.y - a.y) < 0.04) tinySegs++;
+  }
+  assert(tinySegs === 0, "no tiny consecutive segments");
+
+  const xs = puzzle.points.map((p) => p.x);
+  const bboxW = Math.max(...xs) - Math.min(...xs);
+  assert(bboxW >= 0.55, "butterfly uses most of canvas width");
+}
+
+// Generated letter paths
+{
+  const a = letterPaths("A");
+  assert(a?.paths?.length >= 2, "letter A has multiple strokes");
+  assert(a.paths[0].length > 2, "letter A stroke has points");
+}
 
 if (failed) {
   console.error(`\n${failed} failure(s)`);
