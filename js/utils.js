@@ -15,6 +15,7 @@ import {
   loadStore,
   getStoredBest,
   saveStoredBest,
+  buildGameUrl,
 } from "./common.js";
 
 export {
@@ -68,16 +69,14 @@ export function parseUrlParams(search = window.location.search) {
 }
 
 export function buildShareUrl({ size, seed, start, end, daily = false, detour = 1 }) {
-  const url = new URL(window.location.href);
-  url.search = "";
-  url.searchParams.set("size", String(size));
-  url.searchParams.set("seed", String(seed >>> 0));
-  url.searchParams.set("start", start);
-  url.searchParams.set("end", end);
-  if (detour !== 1) url.searchParams.set("detour", String(detour));
-  if (daily) url.searchParams.set("daily", "1");
-  url.hash = "mazes";
-  return url.toString();
+  return buildGameUrl("mazes", {
+    size: String(size),
+    seed: String(seed >>> 0),
+    start,
+    end,
+    detour: detour !== 1 ? String(detour) : undefined,
+    daily: daily ? "1" : undefined,
+  });
 }
 
 const PB_KEY = "maze-personal-bests";

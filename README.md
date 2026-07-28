@@ -24,25 +24,26 @@ Kid-friendly puzzle games for ages 3–8. **Maze Play**, **Connect the Dots**, a
 ## Open locally
 
 ```bash
-npx --yes serve .
+npx --yes serve -s .
 ```
+
+The `-s` flag is required so `/maze`, `/connect`, and `/trace` fall back to the app (SPA mode).
 
 ## URL routing
 
-| Hash / param | Meaning |
-|--------------|---------|
-| `#mazes` | Maze game |
-| `?size=8&seed=123` | Maze config (query string) |
-| `#dots?pic=cat&diff=medium` | Dots game with picture and difficulty |
-| `#dots?daily=1` | Daily connect-the-dots puzzle |
-| `#trace?glyph=A` | Trace letter A |
-| `#trace?kind=number&glyph=5` | Trace number 5 |
-| `#trace?daily=1` | Daily trace glyph |
+| Path | Game |
+|------|------|
+| `/maze` | Mazes |
+| `/connect` | Connect the Dots |
+| `/trace` | Trace letters & numbers |
 
-Games are chosen from the **Game** dropdown (built from a registry in `js/hub.js`). Adding another game = one registry entry + a panel in `index.html`.
+Query params stay on the path, e.g. `/connect?pic=cat&diff=easy`, `/maze?size=8&seed=123`, `/trace?glyph=A`.
 
-Maze example: `?size=8&seed=12345#mazes`  
-Dots example: `#dots?pic=cat&diff=easy&labels=letters`
+Legacy `#mazes` / `#dots` / `#trace` links still work and upgrade to the path form.
+
+Games are chosen from the **Game** dropdown (registry in `js/hub.js`). Adding another game = registry entry + panel + path mapping in `common.js`.
+
+On GitHub project pages (`username.github.io/maze/…`), paths are prefixed with the repo name automatically (`/maze/connect`, `/maze/trace`).
 
 ## Project layout
 

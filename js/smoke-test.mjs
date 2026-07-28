@@ -13,6 +13,8 @@ import {
   dailyTraceSeed,
   deriveSeed,
   formatTime,
+  GAME_PATHS,
+  PATH_TO_GAME,
 } from "./common.js";
 import {
   difficultyLabel,
@@ -187,6 +189,16 @@ function assert(cond, msg) {
 }
 
 assert(hashString("abc") === hashString("abc"), "hash stable");
+
+// Path-based game URLs
+{
+  assert(GAME_PATHS.mazes === "maze", "mazes path is /maze");
+  assert(GAME_PATHS.dots === "connect", "dots path is /connect");
+  assert(GAME_PATHS.trace === "trace", "trace path is /trace");
+  assert(PATH_TO_GAME.maze === "mazes", "maze maps to mazes");
+  assert(PATH_TO_GAME.connect === "dots", "connect maps to dots");
+  assert(PATH_TO_GAME.trace === "trace", "trace maps to trace");
+}
 
 // Dots sampling
 {
