@@ -427,12 +427,36 @@ export class MazeApp {
       end: this.endIcon,
       daily: this.isDaily,
     });
-    const shared = await this._tryNativeShare({
-      title: "Maze Play",
-      text: "Help the frog reach the bug — try this maze!",
-      url,
-    });
-    if (shared) return;
+
+    // Open the native share sheet on mobile (same path as the bit.ly footer link).
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Maze Play",
+          text: "Help the frog reach the bug — try this maze!",
+          url,
+        });
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+      try {
+        await navigator.share({ url });
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+      try {
+        await navigator.share({
+          title: "Maze Play",
+          text: `Help the frog reach the bug — try this maze! ${url}`,
+        });
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+    }
+
     try {
       await copyToClipboard(url);
       this._toast("Link copied!");
@@ -443,41 +467,30 @@ export class MazeApp {
 
   async _shareToolLink() {
     const url = SHARE_SHORT_URL;
-    const shared = await this._tryNativeShare({
-      title: "Maze Play",
-      text: "Help the frog reach the bug — try Maze Play!",
-      url,
-    });
-    if (shared) return;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({
+          title: "Maze Play",
+          text: "Help the frog reach the bug — try Maze Play!",
+          url,
+        });
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+      try {
+        await navigator.share({ url });
+        return;
+      } catch (err) {
+        if (err?.name === "AbortError") return;
+      }
+    }
     try {
       await copyToClipboard(url);
       this._toast("Link copied: bit.ly/mazeit");
     } catch {
       window.open(url, "_blank", "noopener,noreferrer");
     }
-  }
-
-  /**
-   * Open the OS share sheet when available (mobile).
-   * Returns true if the sheet was shown (including user cancel).
-   */
-  async _tryNativeShare({ title, text, url }) {
-    if (!navigator.share) return false;
-
-    // Try URL-only first — most reliable on iOS/Android.
-    // Avoid navigator.canShare(); it often rejects valid share payloads.
-    const payloads = [{ url }, { title, text, url }, { title, text: `${text} ${url}` }];
-
-    for (const data of payloads) {
-      try {
-        await navigator.share(data);
-        return true;
-      } catch (err) {
-        if (err?.name === "AbortError") return true; // user dismissed sheet
-        // try next payload shape
-      }
-    }
-    return false;
   }
 
   _toast(msg) {
