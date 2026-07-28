@@ -117,14 +117,16 @@ export class MazeRenderer {
 
   _fitCellSize(n) {
     const rect = this.container.getBoundingClientRect();
+    const width = rect.width || parseFloat(this.container.style.width) || 400;
+    const height = rect.height || parseFloat(this.container.style.height) || 400;
     const avail = Math.min(
-      rect.width || 360,
-      rect.height || 360,
-      window.innerWidth - 32,
-      window.innerHeight * 0.55
+      width,
+      height,
+      typeof window !== "undefined" ? window.innerWidth - 32 : 400,
+      typeof window !== "undefined" ? window.innerHeight * 0.55 : 400
     );
     const size = Math.floor((avail - this.pad * 2) / n);
-    return Math.max(18, Math.min(56, size));
+    return Math.max(18, Math.min(56, size || 32));
   }
 
   cellOrigin(r, c) {
