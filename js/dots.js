@@ -2,7 +2,8 @@
  * Connect the Dots game logic and UI.
  */
 
-import { celebrate } from "./confetti.js";
+import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
+import { playPop, playBonk } from "./sound.js";
 import {
   GameTimer,
   dailyDotsSeed,
@@ -20,8 +21,9 @@ import { listGeneratedPictures, resolveGeneratedPicture } from "./dots-shapes.js
 
 const DOTS_PB_KEY = "dots-personal-bests";
 const DIFFICULTY_COUNTS = { easy: 12, medium: 25, hard: 50 };
+const RAINBOW = ["#ff6b4a", "#ffc857", "#6bcb77", "#4ecdc4", "#5c7cfa", "#c77dff"];
 const INACTIVITY_HINT_MS = 5000;
-const PRINT_CREDIT = "generated via bit.ly/mazeit";
+const PRINT_CREDIT = "meetashok.github.io/maze · bit.ly/mazeit";
 const MIN_VERTEX_DIST = 0.005;
 const MIN_DOT_SPACING = 0.09;
 const FIT_MIN = 0.1;
@@ -317,6 +319,8 @@ export class DotsApp {
     this.hintPulse = false;
     this.autoHint = true;
     this.timerEnabled = true;
+    this.lineStyle = "straight";
+    this.lastDrawnSegment = -1;
     this._stopCelebrate = null;
     this._inactivityTimer = 0;
     this.els = {};
@@ -357,6 +361,9 @@ export class DotsApp {
       completeBanner: $("dots-complete-banner"),
       completeTime: $("dots-complete-time"),
       completeBest: $("dots-complete-best"),
+      status: $("dots-status"),
+      celebrate: $("dots-celebrate"),
+      lineStyle: $("dots-line-style"),
       dailyChip: $("dots-daily-chip"),
       printModal: $("dots-print-modal"),
       printModalClose: $("dots-print-modal-close"),
@@ -415,6 +422,18 @@ export class DotsApp {
       this._newPuzzle();
     });
 
+    els.lineStyle?.querySelectorAll("[data-line]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.lineStyle = btn.dataset.line;
+        els.lineStyle.querySelectorAll("[data-line]").forEach((b) => {
+          const on = b.dataset.line === this.lineStyle;
+          b.classList.toggle("is-active", on);
+          b.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        this._render();
+      });
+    });
+
     els.autoHint?.addEventListener("change", () => {
       this.autoHint = els.autoHint.checked;
     });
@@ -452,20 +471,26 @@ export class DotsApp {
     });
     els.printGo?.addEventListener("click", () => this._doPrint());
 
-    els.stage?.addEventListener("click", (e) => this._onStageClick(e));
     els.stage?.addEventListener(
-      "touchstart",
+      "pointerdown",
       (e) => {
-        if (e.touches.length !== 1) return;
-        const t = e.touches[0];
-        const el = document.elementFromPoint(t.clientX, t.clientY);
-        if (el?.classList?.contains("dot-hit")) {
-          e.preventDefault();
-          this._tapDot(Number(el.dataset.index));
-        }
+        if (e.pointerType === "mouse" && e.button !== 0) return;
+        const index = this._hitIndexFromPoint(e.clientX, e.clientY);
+        if (index == null) return;
+        e.preventDefault();
+        this._tapDot(index);
       },
       { passive: false }
     );
+  }
+
+  _hitIndexFromPoint(clientX, clientY) {
+    const el = document.elementFromPoint(clientX, clientY);
+    if (!el) return null;
+    const hit = el.closest?.(".dot-hit, .dot-group");
+    if (!hit || !this.els.stage?.contains(hit)) return null;
+    const index = Number(hit.dataset.index);
+    return Number.isFinite(index) ? index : null;
   }
 
   loadFromHashParams(params) {
@@ -530,12 +555,14 @@ export class DotsApp {
   _setupPuzzle({ sync = true } = {}) {
     this._stopCelebrate?.();
     this._stopCelebrate = null;
+    hideCelebrationOverlay(this.els.celebrate);
     this.timer.reset();
     this.connected = 0;
     this.completed = false;
     this.hintPulse = false;
+    this.lastDrawnSegment = -1;
     clearTimeout(this._inactivityTimer);
-    this.els.completeBanner.hidden = true;
+    if (this.els.completeBanner) this.els.completeBanner.hidden = true;
 
     const paths = resolvePicturePaths(this.picture);
     const guides = resolvePictureGuides(this.picture);
@@ -545,6 +572,7 @@ export class DotsApp {
 
     this._updateBestDisplay();
     this._updateDailyChip();
+    this._updateStatus();
     this._render();
     if (sync) this._syncUrl();
     this._armInactivityHint();
@@ -553,11 +581,14 @@ export class DotsApp {
   _resetProgress() {
     this._stopCelebrate?.();
     this._stopCelebrate = null;
+    hideCelebrationOverlay(this.els.celebrate);
     this.timer.reset();
     this.connected = 0;
     this.completed = false;
     this.hintPulse = false;
-    this.els.completeBanner.hidden = true;
+    this.lastDrawnSegment = -1;
+    if (this.els.completeBanner) this.els.completeBanner.hidden = true;
+    this._updateStatus();
     this._render();
     this._armInactivityHint();
   }
@@ -585,9 +616,9 @@ export class DotsApp {
   }
 
   _onStageClick(e) {
-    const hit = e.target.closest?.(".dot-hit");
-    if (!hit) return;
-    this._tapDot(Number(hit.dataset.index));
+    const index = this._hitIndexFromPoint(e.clientX, e.clientY);
+    if (index == null) return;
+    this._tapDot(index);
   }
 
   _tapDot(index) {
@@ -597,15 +628,35 @@ export class DotsApp {
     if (index === this.connected) {
       if (this.connected === 0 && this.timerEnabled) this.timer.start();
       this.connected++;
+      this.lastDrawnSegment = this.connected - 1;
       this.hintPulse = false;
+      playPop();
+      this._updateStatus();
       if (this.connected >= this.puzzle.points.length) this._onComplete();
       else this._armInactivityHint();
     } else {
+      playBonk();
       this._shakeDot(index);
+      this.hintPulse = true;
       this._armInactivityHint();
+      this._render();
       return;
     }
     this._render();
+  }
+
+  _updateStatus() {
+    if (!this.els.status) return;
+    if (this.completed) {
+      this.els.status.textContent = `${this.picture?.name || "Picture"} revealed!`;
+      return;
+    }
+    const cat = this.lib?.categories?.find((c) => c.id === this.category);
+    const emoji = cat?.emoji || "🔵";
+    const name = this.picture?.name || "Picture";
+    const n = this.puzzle?.points?.length || 0;
+    const next = this.connected + 1;
+    this.els.status.textContent = `${emoji} ${name} — ${n} dots · tap ${next}`;
   }
 
   _shakeDot(index) {
@@ -646,14 +697,30 @@ export class DotsApp {
       this._updateBestDisplay();
     }
 
-    this.els.completeBanner.hidden = false;
-    this.els.completeTime.textContent = this.timerEnabled
-      ? `Time: ${formatTime(ms)}${isNew ? " — New record!" : ""}`
-      : "Picture complete!";
+    if (this.els.completeBanner) this.els.completeBanner.hidden = false;
+    if (this.els.completeTime) {
+      this.els.completeTime.textContent = this.timerEnabled
+        ? `Time: ${formatTime(ms)}${isNew ? " — New record!" : ""}`
+        : "Picture complete!";
+    }
     const best = getStoredBest(DOTS_PB_KEY, `${this.difficulty}:${this.labelType}`);
-    this.els.completeBest.textContent = best ? `Your best (${this.difficulty}): ${formatTime(best)}` : "";
+    if (this.els.completeBest) {
+      this.els.completeBest.textContent = best ? `Your best (${this.difficulty}): ${formatTime(best)}` : "";
+    }
 
+    this._updateStatus();
     this._stopCelebrate = celebrate(document.body, 3200);
+    showCelebrationOverlay(this.els.celebrate, {
+      emoji: "🎉",
+      detail: this.timerEnabled && ms > 0 ? `Time: ${formatTime(ms)}` : `${this.picture?.name || "Picture"} complete!`,
+      againLabel: "Play Again",
+      newLabel: "New Picture",
+      onAgain: () => this._resetProgress(),
+      onNew: () => {
+        this.isDaily = false;
+        this._newPuzzle();
+      },
+    });
     this._render();
   }
 
@@ -676,13 +743,22 @@ export class DotsApp {
   }
 
   _dotRadii(count) {
-    const visible = Math.max(0.9, Math.min(1.8, 2.8 - count * 0.05));
-    const hit = Math.max(3.5, visible + 1.8);
-    return { visible, hit, done: visible * 0.65 };
+    // Easy = big juicy dots; hard = smaller. Hit targets stay large for fingers.
+    const byDiff = {
+      easy: { visible: 2.4, hit: 6.5 },
+      medium: { visible: 1.7, hit: 5.5 },
+      hard: { visible: 1.2, hit: 5 },
+    };
+    const base = byDiff[this.difficulty] || byDiff.medium;
+    const visible = Math.max(base.visible * 0.85, Math.min(base.visible, 3.2 - count * 0.03));
+    const hit = Math.max(base.hit, visible + 3.2);
+    return { visible, hit, done: visible * 0.7 };
   }
 
   _labelFontSize(count) {
-    return Math.max(2.4, Math.min(3.2, 3.8 - count * 0.045));
+    const byDiff = { easy: 3.8, medium: 3.1, hard: 2.6 };
+    const base = byDiff[this.difficulty] || 3.1;
+    return Math.max(2.4, Math.min(base, base + 0.4 - count * 0.02));
   }
 
   _bestLabelOffset(pt, index, points, centroid, tx, ty) {
@@ -740,6 +816,7 @@ export class DotsApp {
     const labelSize = this._labelFontSize(count);
     const centroid = this._puzzleCentroid();
     const lineCount = this.completed ? count : this.connected;
+    const animateFrom = this.lastDrawnSegment;
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", `0 0 ${vb} ${vb}`);
@@ -761,7 +838,12 @@ export class DotsApp {
     }
 
     const guidesG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    guidesG.setAttribute("class", `dots-guides${this.completed ? " complete" : ""}`);
+    // Easy: faint ghost outline. Medium/Hard: hide until complete (mystery reveal).
+    let guideClass = "dots-guides";
+    if (this.completed) guideClass += " complete";
+    else if (this.difficulty === "easy") guideClass += " ghost";
+    else guideClass += " hidden-play";
+    guidesG.setAttribute("class", guideClass);
     for (const path of this.puzzle.guides || []) {
       if (path.length < 2) continue;
       const guide = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -778,15 +860,39 @@ export class DotsApp {
     for (let i = 1; i < lineCount; i++) {
       const a = this.puzzle.points[i - 1];
       const b = this.puzzle.points[i];
-      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-      line.setAttribute("x1", tx(a.x));
-      line.setAttribute("y1", ty(a.y));
-      line.setAttribute("x2", tx(b.x));
-      line.setAttribute("y2", ty(b.y));
-      line.setAttribute("class", "dots-line");
+      const x1 = tx(a.x);
+      const y1 = ty(a.y);
+      const x2 = tx(b.x);
+      const y2 = ty(b.y);
+      const color =
+        this.lineStyle === "rainbow" ? RAINBOW[(i - 1) % RAINBOW.length] : undefined;
+
+      let line;
+      if (this.lineStyle === "curved") {
+        line = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        const mx = (x1 + x2) / 2;
+        const my = (y1 + y2) / 2;
+        const dx = x2 - x1;
+        const dy = y2 - y1;
+        const len = Math.hypot(dx, dy) || 1;
+        const bulge = Math.min(4, len * 0.18);
+        const cx = mx - (dy / len) * bulge;
+        const cy = my + (dx / len) * bulge;
+        line.setAttribute("d", `M ${x1} ${y1} Q ${cx} ${cy} ${x2} ${y2}`);
+        line.setAttribute("fill", "none");
+      } else {
+        line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x1);
+        line.setAttribute("y1", y1);
+        line.setAttribute("x2", x2);
+        line.setAttribute("y2", y2);
+      }
+      line.setAttribute("class", `dots-line${i === animateFrom ? " draw-in" : ""}`);
+      if (color) line.setAttribute("stroke", color);
       lines.appendChild(line);
     }
     svg.appendChild(lines);
+    this.lastDrawnSegment = -1;
 
     const dotsG = document.createElementNS("http://www.w3.org/2000/svg", "g");
     dotsG.setAttribute("class", "dots-points");
@@ -799,11 +905,13 @@ export class DotsApp {
       const next = i === this.connected && !this.completed;
       const pulse = next && this.hintPulse;
       const labelOff = this._bestLabelOffset(pt, i, this.puzzle.points, centroid, tx, ty);
+      const labelR = Math.hypot(labelOff.x, labelOff.y) + labelSize * 0.7;
+      const hitR = Math.max(radii.hit, labelR + 0.5);
 
       const hit = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       hit.setAttribute("cx", tx(pt.x));
       hit.setAttribute("cy", ty(pt.y));
-      hit.setAttribute("r", radii.hit);
+      hit.setAttribute("r", hitR);
       hit.setAttribute("class", `dot-hit${done ? " done" : ""}${next ? " next" : ""}${pulse ? " pulse" : ""}`);
       hit.dataset.index = String(i);
 
@@ -811,16 +919,13 @@ export class DotsApp {
       visible.setAttribute("cx", tx(pt.x));
       visible.setAttribute("cy", ty(pt.y));
       visible.setAttribute("r", done ? radii.done : radii.visible);
-      visible.setAttribute("class", `dot${done ? " done" : ""}${next ? " next" : ""}${pulse ? " pulse" : ""}`);
+      visible.setAttribute(
+        "class",
+        `dot${done ? " done" : ""}${next ? " next" : ""}${pulse ? " pulse" : ""}${
+          done && i === this.connected - 1 ? " pop" : ""
+        }`
+      );
       visible.setAttribute("pointer-events", "none");
-      if (pulse) {
-        const anim = document.createElementNS("http://www.w3.org/2000/svg", "animate");
-        anim.setAttribute("attributeName", "opacity");
-        anim.setAttribute("values", "1;0.45;1");
-        anim.setAttribute("dur", "1s");
-        anim.setAttribute("repeatCount", "indefinite");
-        visible.appendChild(anim);
-      }
 
       g.appendChild(hit);
       g.appendChild(visible);
@@ -833,6 +938,7 @@ export class DotsApp {
         label.setAttribute("class", `dot-label${next ? " next" : ""}`);
         label.setAttribute("text-anchor", "middle");
         label.setAttribute("dominant-baseline", "middle");
+        label.setAttribute("pointer-events", "none");
         label.textContent = this.puzzle.labels[i];
         g.appendChild(label);
       }
@@ -923,6 +1029,8 @@ export class DotsApp {
     svg.setAttribute("class", "dots-print-svg");
 
     for (const path of puzzle.guides || []) {
+      // Worksheets: dots + numbers only — no picture spoilers unless solution/coloring.
+      if (!showSolution) continue;
       if (path.length < 2) continue;
       const guide = document.createElementNS("http://www.w3.org/2000/svg", "path");
       let d = `M ${tx(path[0].x)} ${ty(path[0].y)}`;
@@ -1025,13 +1133,14 @@ export class DotsApp {
       page.className = "print-page print-page-worksheet";
       const title = document.createElement("h1");
       title.className = "print-title";
-      title.textContent = `Connect the Dots — ${count} puzzles (${this.difficulty})`;
+      title.textContent = `Connect the Dots — ${count} puzzles · ${this.difficulty}`;
       page.appendChild(title);
       const grid = document.createElement("div");
       grid.className = "print-dots-grid";
       page.appendChild(grid);
 
       const pool = getPicturesByCategory(this.lib, this.category);
+      const cat = this.lib.categories.find((c) => c.id === this.category);
       for (let i = 0; i < count; i++) {
         const pic = pool[i % pool.length];
         const paths = resolvePicturePaths(pic);
@@ -1040,7 +1149,7 @@ export class DotsApp {
         const card = document.createElement("figure");
         card.className = "print-card";
         const cap = document.createElement("figcaption");
-        cap.textContent = `#${i + 1} ${pic.name}`;
+        cap.textContent = `${cat?.emoji || ""} ${pic.name} · ${this.difficulty}`;
         const svg = this.createPrintSvg({
           puzzle,
           picture: pic,
@@ -1062,7 +1171,9 @@ export class DotsApp {
       page.className = "print-page";
       const title = document.createElement("h1");
       title.className = "print-title";
-      title.textContent = `Connect the Dots — ${this.picture.name} (${this.difficulty})`;
+      const cat = this.lib?.categories?.find((c) => c.id === this.category);
+      const catEmoji = cat?.emoji || "🔵";
+      title.textContent = `${catEmoji} ${this.picture.name} — ${this.difficulty}`;
       page.appendChild(title);
       const svg = this.createPrintSvg({
         puzzle: this.puzzle,

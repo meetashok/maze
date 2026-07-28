@@ -1,11 +1,7 @@
 /**
- * Game Hub — navigation and shared shell.
+ * Game Hub — landing page, navigation, and shared shell.
  *
- * Games are registered in GAMES. Primary nav shows up to PRIMARY_SLOTS
- * buttons (empty slots reserved for future games). Overflow goes behind
- * the hamburger menu.
- *
- * URLs: /maze · /connect · /trace  (legacy #hash links still redirect)
+ * URLs: / (home) · /maze · /connect · /trace  (legacy #hash links still redirect)
  */
 
 import { MazeApp } from "./ui.js";
@@ -16,58 +12,72 @@ import {
   setGameRoute,
   initTheme,
 } from "./common.js";
-
-/** How many game buttons to show in the primary row before overflow. */
-const PRIMARY_SLOTS = 5;
+import { bindSoundToggle } from "./sound.js";
 
 /**
  * @type {Record<string, {
  *   title: string,
  *   short: string,
+ *   emoji: string,
  *   tagline: string,
  *   description: string,
- *   howto: string
+ *   howto: string,
+ *   cardBlurb: string
  * }>}
  */
 export const GAMES = {
   mazes: {
     title: "Maze Play",
     short: "Mazes",
+    emoji: "🟩",
     tagline: "Help the frog reach the bug",
     description: "Kid-friendly maze puzzles — play, print, and share.",
     howto: "Trace a path so the frog can eat the bug. Drag backward to undo.",
+    cardBlurb: "Help the frog escape!",
   },
   dots: {
     title: "Connect the Dots",
     short: "Connect Dots",
+    emoji: "🔵",
     tagline: "Tap the numbers in order",
     description: "Connect numbered dots to reveal hidden pictures.",
     howto: "Tap the dots in order to reveal the picture. Use hints if you get stuck!",
+    cardBlurb: "Connect dots to reveal pictures!",
   },
   trace: {
     title: "Trace Letters & Numbers",
     short: "Trace ABC",
+    emoji: "✏️",
     tagline: "Follow the dashes — letters & numbers",
-    description: "Trace uppercase letters and numbers — practice online or print worksheets.",
+    description: "Trace letters and numbers — practice online or print worksheets.",
     howto: "Start at the glowing green dot and follow each dashed stroke. Print packs for crayon practice!",
+    cardBlurb: "Learn to write letters!",
   },
+};
+
+const HOME_META = {
+  title: "Puzzle Play",
+  tagline: "Pick a game and play!",
+  description: "Kid-friendly puzzle games — mazes, connect the dots, and trace letters!",
+  howto: "Choose a game below. Tap the home button any time to come back here.",
 };
 
 const GAME_IDS = Object.keys(GAMES);
 
 class GameHub {
   constructor() {
-    this.activeGame = "mazes";
+    this.activeGame = "home";
     this.mazeApp = null;
     this.dotsApp = null;
     this.traceApp = null;
-    this.menuOpen = false;
     this.els = {};
   }
 
   async init() {
     this._cacheEls();
     this._buildNav();
+    this._buildLanding();
+    bindSoundToggle(this.els.soundToggle);
     initTheme(this.els.themeToggle, () => {
       this.mazeApp?._redraw?.();
       this.dotsApp?._render?.();
@@ -75,8 +85,8 @@ class GameHub {
     });
 
     let bootRoute = parseGameRoute();
-    if (!GAMES[bootRoute.game]) {
-      bootRoute = { game: "mazes", params: new URLSearchParams(), legacyHash: false };
+    if (bootRoute.game !== "home" && !GAMES[bootRoute.game]) {
+      bootRoute = { game: "home", params: new URLSearchParams(), legacyHash: false };
     }
     setGameRoute(bootRoute.game, Object.fromEntries(bootRoute.params.entries()), true);
     bootRoute = parseGameRoute();
@@ -92,8 +102,7 @@ class GameHub {
 
     this._bindNav();
     this._applyRoute(bootRoute, true);
-    const onRoute = () => this._applyRoute(parseGameRoute(), false);
-    window.addEventListener("popstate", onRoute);
+    window.addEventListener("popstate", () => this._applyRoute(parseGameRoute(), false));
   }
 
   _cacheEls() {
@@ -102,10 +111,12 @@ class GameHub {
       brand: $("hub-brand"),
       tagline: $("hub-tagline"),
       themeToggle: $("theme-toggle"),
+      soundToggle: $("sound-toggle"),
+      homeBtn: $("nav-home"),
       nav: $("game-nav"),
       primary: $("game-nav-primary"),
-      moreBtn: $("game-nav-more"),
-      menu: $("game-nav-menu"),
+      landing: $("game-home"),
+      landingCards: $("landing-cards"),
       panelMazes: $("game-mazes"),
       panelDots: $("game-dots"),
       panelTrace: $("game-trace"),
@@ -113,84 +124,55 @@ class GameHub {
     };
   }
 
-  _makeGameButton(id, { inMenu = false } = {}) {
+  _makeGameButton(id) {
+    const meta = GAMES[id];
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = inMenu ? "game-nav-menu-item" : "game-nav-btn";
+    btn.className = "game-nav-btn";
     btn.dataset.game = id;
-    btn.textContent = GAMES[id].short;
+    btn.innerHTML = `<span class="game-nav-emoji" aria-hidden="true">${meta.emoji}</span><span class="game-nav-label">${meta.short}</span>`;
     btn.setAttribute("aria-pressed", "false");
-    btn.title = GAMES[id].title;
-    btn.addEventListener("click", () => {
-      this._closeMenu();
-      this._switchGame(id);
-    });
+    btn.setAttribute("aria-label", meta.title);
+    btn.title = meta.title;
+    btn.addEventListener("click", () => this._switchGame(id));
     return btn;
   }
 
   _buildNav() {
-    const { primary, moreBtn, menu } = this.els;
+    const { primary } = this.els;
     if (!primary) return;
-
     primary.innerHTML = "";
-    primary.style.setProperty("--game-slots", String(PRIMARY_SLOTS));
-
-    const primaryIds = GAME_IDS.slice(0, PRIMARY_SLOTS);
-    const overflowIds = GAME_IDS.slice(PRIMARY_SLOTS);
-
-    for (const id of primaryIds) {
+    primary.style.setProperty("--game-slots", String(GAME_IDS.length));
+    for (const id of GAME_IDS) {
       primary.appendChild(this._makeGameButton(id));
     }
-    // Reserve empty slots so 4th/5th games have a clear home later.
-    for (let i = primaryIds.length; i < PRIMARY_SLOTS; i++) {
-      const slot = document.createElement("span");
-      slot.className = "game-nav-slot";
-      slot.setAttribute("aria-hidden", "true");
-      primary.appendChild(slot);
-    }
+  }
 
-    if (menu) {
-      menu.innerHTML = "";
-      for (const id of overflowIds) {
-        menu.appendChild(this._makeGameButton(id, { inMenu: true }));
-      }
-    }
-
-    if (moreBtn) {
-      const showMore = overflowIds.length > 0;
-      moreBtn.hidden = !showMore;
-      moreBtn.setAttribute("aria-expanded", "false");
+  _buildLanding() {
+    const host = this.els.landingCards;
+    if (!host) return;
+    host.innerHTML = "";
+    for (const id of GAME_IDS) {
+      const meta = GAMES[id];
+      const card = document.createElement("button");
+      card.type = "button";
+      card.className = "landing-card";
+      card.dataset.game = id;
+      card.setAttribute("aria-label", `${meta.title}. ${meta.cardBlurb}`);
+      card.innerHTML = `
+        <span class="landing-card-art" aria-hidden="true">${meta.emoji}</span>
+        <span class="landing-card-body">
+          <span class="landing-card-title">${meta.title}</span>
+          <span class="landing-card-blurb">${meta.cardBlurb}</span>
+        </span>
+      `;
+      card.addEventListener("click", () => this._switchGame(id));
+      host.appendChild(card);
     }
   }
 
   _bindNav() {
-    this.els.moreBtn?.addEventListener("click", (e) => {
-      e.stopPropagation();
-      this.menuOpen ? this._closeMenu() : this._openMenu();
-    });
-    document.addEventListener("click", (e) => {
-      if (!this.menuOpen) return;
-      if (this.els.nav?.contains(e.target)) return;
-      this._closeMenu();
-    });
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape") this._closeMenu();
-    });
-  }
-
-  _openMenu() {
-    if (!this.els.menu || this.els.moreBtn?.hidden) return;
-    this.menuOpen = true;
-    this.els.menu.hidden = false;
-    this.els.moreBtn?.setAttribute("aria-expanded", "true");
-    this.els.moreBtn?.classList.add("is-open");
-  }
-
-  _closeMenu() {
-    this.menuOpen = false;
-    if (this.els.menu) this.els.menu.hidden = true;
-    this.els.moreBtn?.setAttribute("aria-expanded", "false");
-    this.els.moreBtn?.classList.remove("is-open");
+    this.els.homeBtn?.addEventListener("click", () => this._switchGame("home"));
   }
 
   _syncNavActive(game) {
@@ -201,16 +183,19 @@ class GameHub {
       btn.classList.toggle("is-active", on);
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
+    this.els.homeBtn?.classList.toggle("is-active", game === "home");
   }
 
   _panelFor(game) {
+    if (game === "home") return this.els.landing;
     if (game === "dots") return this.els.panelDots;
     if (game === "trace") return this.els.panelTrace;
     return this.els.panelMazes;
   }
 
   _switchGame(game) {
-    if (!GAMES[game] || game === this.activeGame) return;
+    if (game !== "home" && !GAMES[game]) return;
+    if (game === this.activeGame) return;
     let params = {};
     if (game === "dots") params = this.dotsApp?.getShareParams?.() || {};
     if (game === "trace") params = this.traceApp?.getShareParams?.() || {};
@@ -223,13 +208,23 @@ class GameHub {
   }
 
   _applyRoute({ game, params }, initial) {
-    const next = GAMES[game] ? game : "mazes";
+    const next = game === "home" || GAMES[game] ? game : "home";
     this.activeGame = next;
     this._syncNavActive(next);
 
-    for (const id of GAME_IDS) {
-      const panel = this._panelFor(id);
-      if (panel) panel.hidden = id !== next;
+    const panels = [this.els.landing, this.els.panelMazes, this.els.panelDots, this.els.panelTrace];
+    for (const panel of panels) {
+      if (panel) panel.hidden = panel !== this._panelFor(next);
+    }
+
+    if (next === "home") {
+      if (this.els.brand) this.els.brand.textContent = HOME_META.title;
+      if (this.els.tagline) this.els.tagline.textContent = HOME_META.tagline;
+      document.title = `${HOME_META.title} — Mazes, Dots & Trace`;
+      if (this.els.footerHowto) this.els.footerHowto.textContent = HOME_META.howto;
+      const desc = document.querySelector('meta[name="description"]');
+      if (desc) desc.content = HOME_META.description;
+      return;
     }
 
     const meta = GAMES[next];

@@ -5,7 +5,8 @@
 import { generateMaze, solveBFS, getHintSteps } from "./maze.js";
 import { MazeRenderer } from "./renderer.js";
 import { PathTracer } from "./interaction.js";
-import { celebrate } from "./confetti.js";
+import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
+import { playPop, playBonk } from "./sound.js";
 import {
   randomSeed,
   dailySeed,
@@ -14,6 +15,8 @@ import {
   DEFAULT_START,
   DEFAULT_END,
   difficultyLabel,
+  difficultyKidLabel,
+  DIFFICULTY_PRESETS,
   detourLabel,
   parseUrlParams,
   buildShareUrl,
@@ -35,7 +38,7 @@ const THEME_KEY = "maze-theme";
 const THEME_LIGHT = "light";
 const THEME_DARK = "dark";
 const SHARE_SHORT_URL = "https://bit.ly/mazeit";
-const PRINT_CREDIT = "generated via bit.ly/mazeit";
+const PRINT_CREDIT = "meetashok.github.io/maze · bit.ly/mazeit";
 
 const HINT_STEPS = 4;
 
@@ -70,12 +73,16 @@ export class MazeApp {
       renderer: this.renderer,
       getMaze: () => this.maze,
       onPathChange: (path) => this._onPathChange(path),
-      onCollision: (cell) => this.renderer.flashCollision(cell),
+      onCollision: (cell) => {
+        this.renderer.flashCollision(cell);
+        playBonk();
+      },
       onStart: () => this._onTraceStart(),
       onComplete: () => this._onSolved(),
     });
     this.tracer.attach(this.els.mazeStage);
 
+    this._buildDiffPresets();
     this._bindControls();
     this._buildIconGrid();
     this._loadFromUrlOrDefault();
@@ -88,11 +95,14 @@ export class MazeApp {
       mazeStage: $("maze-stage"),
       sizeRange: $("size-range"),
       sizeValue: $("size-value"),
+      sizeKidLabel: $("size-kid-label"),
       difficulty: $("difficulty-label"),
+      diffPresets: $("maze-diff-presets"),
       detourButtons: $("detour-buttons"),
       btnNew: $("btn-new"),
       btnDaily: $("btn-daily"),
       btnClear: $("btn-clear"),
+      btnUndo: $("btn-maze-undo"),
       btnHint: $("btn-hint"),
       btnSolution: $("btn-solution"),
       btnShare: $("btn-share"),
@@ -103,6 +113,7 @@ export class MazeApp {
       timerDisplay: $("timer-display"),
       bestDisplay: $("best-display"),
       recordBanner: $("record-banner"),
+      celebrate: $("maze-celebrate"),
       toast: $("toast"),
       iconModal: $("icon-modal"),
       iconGrid: $("icon-grid"),
@@ -121,6 +132,29 @@ export class MazeApp {
     };
     this.printMode = "quick";
     this.bulkEntries = [{ size: 8, count: 1 }];
+  }
+
+  _buildDiffPresets() {
+    const host = this.els.diffPresets;
+    if (!host) return;
+    host.innerHTML = "";
+    for (const preset of DIFFICULTY_PRESETS) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "diff-preset";
+      btn.dataset.size = String(preset.size);
+      btn.innerHTML = `<span aria-hidden="true">${preset.emoji}</span><span>${preset.label}</span>`;
+      btn.setAttribute("aria-pressed", "false");
+      btn.addEventListener("click", () => {
+        this.size = preset.size;
+        this.isDaily = false;
+        this.seed = randomSeed();
+        if (this.els.sizeRange) this.els.sizeRange.value = String(preset.size);
+        this._updateSizeLabel();
+        this._loadMaze(true);
+      });
+      host.appendChild(btn);
+    }
   }
 
   _initTheme() {
@@ -199,6 +233,7 @@ export class MazeApp {
     });
 
     els.btnClear.addEventListener("click", () => this._clearPath());
+    els.btnUndo?.addEventListener("click", () => this._undoStep());
 
     els.btnHint.addEventListener("click", () => this._showHint());
 
@@ -306,6 +341,7 @@ export class MazeApp {
   _loadMaze(updateUrl) {
     this._stopCelebrate?.();
     this._stopCelebrate = null;
+    hideCelebrationOverlay(this.els.celebrate);
     this._stopTimer(false);
     this.timerMs = 0;
     this._updateTimerDisplay();
@@ -313,6 +349,7 @@ export class MazeApp {
     this.hintCells = [];
     this._syncSolutionButton();
     this.els.recordBanner.hidden = true;
+    if (this.els.btnUndo) this.els.btnUndo.hidden = true;
 
     this.maze = generateMaze(this.size, this.seed, this.detour);
     this.solution = solveBFS(this.maze);
@@ -337,6 +374,7 @@ export class MazeApp {
   _clearPath() {
     this._stopCelebrate?.();
     this._stopCelebrate = null;
+    hideCelebrationOverlay(this.els.celebrate);
     this._stopTimer(false);
     this.timerMs = 0;
     this._updateTimerDisplay();
@@ -353,6 +391,16 @@ export class MazeApp {
       this.hintCells = [];
       this.renderer.drawHint([]);
     }
+    if (this.els.btnUndo) {
+      this.els.btnUndo.hidden = !(path && path.length > 1) || this.tracer?.completed;
+    }
+  }
+
+  _undoStep() {
+    if (!this.tracer || this.tracer.completed || this.tracer.path.length < 2) return;
+    this.tracer.path.pop();
+    this._onPathChange(this.tracer.path);
+    playPop();
   }
 
   _onTraceStart() {
@@ -362,17 +410,33 @@ export class MazeApp {
   _onSolved() {
     this._stopTimer(true);
     const ms = this.timerMs;
+    let detail = "";
     if (this.timerEnabled && ms > 0) {
       const { isNew } = savePersonalBest(this.size, ms);
       this._updateBestDisplay();
+      detail = `Time: ${formatTime(ms)}`;
       if (isNew) {
         this.els.recordBanner.hidden = false;
+        detail += " — New record!";
         setTimeout(() => {
           this.els.recordBanner.hidden = true;
         }, 3500);
       }
     }
+    if (this.els.btnUndo) this.els.btnUndo.hidden = true;
     this._stopCelebrate = celebrate(document.body, 3200);
+    showCelebrationOverlay(this.els.celebrate, {
+      emoji: this.startIcon || "🐸",
+      detail,
+      againLabel: "Play Again",
+      newLabel: "New Maze",
+      onAgain: () => this._clearPath(),
+      onNew: () => {
+        this.isDaily = false;
+        this.seed = randomSeed();
+        this._loadMaze(true);
+      },
+    });
   }
 
   _showHint() {
@@ -411,6 +475,16 @@ export class MazeApp {
     this.els.sizeValue.textContent = `${size}×${size}`;
     this.els.difficulty.textContent = difficultyLabel(size);
     this.els.difficulty.dataset.level = difficultyLabel(size).toLowerCase();
+    if (this.els.sizeKidLabel) {
+      this.els.sizeKidLabel.textContent = difficultyKidLabel(size);
+    }
+    this.els.diffPresets?.querySelectorAll(".diff-preset").forEach((btn) => {
+      const presetSize = Number(btn.dataset.size);
+      const active = Math.abs(presetSize - size) <= (presetSize <= 6 ? 1 : 2) &&
+        difficultyLabel(presetSize) === difficultyLabel(size);
+      btn.classList.toggle("is-active", active);
+      btn.setAttribute("aria-pressed", active ? "true" : "false");
+    });
   }
 
   _syncDetourButtons() {
@@ -721,7 +795,8 @@ export class MazeApp {
     const title = document.createElement("h1");
     title.className = "print-title";
     title.textContent =
-      pageLabel || `Maze Puzzle — ${size}×${size} · ${detourLabel(detour)}`;
+      pageLabel ||
+      `Maze Puzzle — ${difficultyLabel(size)} (${size}×${size}) · ${detourLabel(detour)}`;
     page.appendChild(title);
 
     const maze = generateMaze(size, seed, detour);
@@ -777,7 +852,7 @@ export class MazeApp {
               seed,
               detour: this.detour,
               withSolution,
-              pageLabel: `Maze Puzzle — ${size}×${size} · ${detourLabel(this.detour)} (#${pageIndex})`,
+              pageLabel: `Maze Puzzle — ${difficultyLabel(size)} (${size}×${size}) · ${detourLabel(this.detour)} (#${pageIndex})`,
             })
           );
         }
@@ -807,7 +882,7 @@ export class MazeApp {
             seed: this.seed,
             detour: this.detour,
             withSolution,
-            pageLabel: `Maze Puzzle — ${this.size}×${this.size} · ${detourLabel(this.detour)}`,
+            pageLabel: `Maze Puzzle — ${difficultyLabel(this.size)} (${this.size}×${this.size}) · ${detourLabel(this.detour)}`,
           })
         );
       } else {

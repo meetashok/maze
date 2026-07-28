@@ -1,42 +1,12 @@
 /**
- * Short celebration: confetti particles + Web Audio chirp.
+ * Celebration: confetti particles + shared win banner + Web Audio chirp.
  */
 
-let audioCtx = null;
+import { playWinSound } from "./sound.js";
 
-function getAudioCtx() {
-  if (!audioCtx) {
-    const Ctx = window.AudioContext || window.webkitAudioContext;
-    if (Ctx) audioCtx = new Ctx();
-  }
-  return audioCtx;
-}
+const WIN_PHRASES = ["You did it!", "Amazing!", "Great job!", "Wow!", "Super!", "Awesome!"];
 
-export function playWinSound() {
-  try {
-    const ctx = getAudioCtx();
-    if (!ctx) return;
-    if (ctx.state === "suspended") ctx.resume();
-
-    const notes = [523.25, 659.25, 783.99, 1046.5];
-    notes.forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = "sine";
-      osc.frequency.value = freq;
-      const t0 = ctx.currentTime + i * 0.09;
-      gain.gain.setValueAtTime(0.0001, t0);
-      gain.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.28);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(t0);
-      osc.stop(t0 + 0.3);
-    });
-  } catch {
-    // ignore audio errors
-  }
-}
+export { playWinSound };
 
 /**
  * @param {HTMLElement} host
@@ -111,4 +81,49 @@ export function celebrate(host, durationMs = 3200) {
     canvas.remove();
     window.removeEventListener("resize", resize);
   };
+}
+
+/**
+ * Fill a shared celebration overlay with emoji, phrase, and action buttons.
+ * @param {HTMLElement | null} overlay
+ * @param {{ emoji?: string, message?: string, detail?: string, onAgain?: () => void, onNew?: () => void, againLabel?: string, newLabel?: string }} opts
+ */
+export function showCelebrationOverlay(overlay, opts = {}) {
+  if (!overlay) return;
+  const phrase = opts.message || WIN_PHRASES[Math.floor(Math.random() * WIN_PHRASES.length)];
+  const emojiEl = overlay.querySelector(".celebrate-emoji");
+  const titleEl = overlay.querySelector(".celebrate-title");
+  const detailEl = overlay.querySelector(".celebrate-detail");
+  const againBtn = overlay.querySelector("[data-celebrate-again]");
+  const newBtn = overlay.querySelector("[data-celebrate-new]");
+
+  if (emojiEl) emojiEl.textContent = opts.emoji || "🎉";
+  if (titleEl) titleEl.textContent = phrase;
+  if (detailEl) {
+    detailEl.textContent = opts.detail || "";
+    detailEl.hidden = !opts.detail;
+  }
+  if (againBtn) {
+    againBtn.textContent = opts.againLabel || "Play Again";
+    againBtn.onclick = () => {
+      hideCelebrationOverlay(overlay);
+      opts.onAgain?.();
+    };
+  }
+  if (newBtn) {
+    newBtn.textContent = opts.newLabel || "New Puzzle";
+    newBtn.onclick = () => {
+      hideCelebrationOverlay(overlay);
+      opts.onNew?.();
+    };
+  }
+
+  overlay.hidden = false;
+  overlay.setAttribute("aria-hidden", "false");
+}
+
+export function hideCelebrationOverlay(overlay) {
+  if (!overlay) return;
+  overlay.hidden = true;
+  overlay.setAttribute("aria-hidden", "true");
 }

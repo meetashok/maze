@@ -177,9 +177,9 @@ function assert(cond, msg) {
   assert(difficultyLabel(12) === "Hard", "hard");
   assert(difficultyLabel(20) === "Expert", "expert");
   assert(detourLabel(0) === "Simple", "simple style");
-  assert(detourLabel(1) === "Branchy", "branchy style");
-  assert(detourLabel(2) === "Tricky", "tricky style");
-  assert(detourLabel(3) === "Expert", "expert style");
+  assert(detourLabel(1) === "Lots of paths", "lots of paths style");
+  assert(detourLabel(2) === "Tricky dead ends", "tricky dead ends style");
+  assert(detourLabel(3) === "Very tricky", "very tricky style");
   assert(formatTime(65000) === "1:05.0", "formatTime");
 }
 
@@ -197,6 +197,7 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(GAME_PATHS.mazes === "maze", "mazes path is /maze");
   assert(GAME_PATHS.dots === "connect", "dots path is /connect");
   assert(GAME_PATHS.trace === "trace", "trace path is /trace");
+  assert(GAME_PATHS.home === "", "home path is site root");
   assert(PATH_TO_GAME.maze === "mazes", "maze maps to mazes");
   assert(PATH_TO_GAME.connect === "dots", "connect maps to dots");
   assert(PATH_TO_GAME.trace === "trace", "trace maps to trace");
@@ -341,10 +342,15 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
 {
   const a = resolveTraceGlyph("letter", "a");
   assert(a?.glyph === "A" && a.paths.length >= 2, "resolveTraceGlyph letter A");
+  const lowerA = resolveTraceGlyph("letter", "a", "lower");
+  assert(lowerA?.glyph === "a" && lowerA.paths.length >= 1, "resolveTraceGlyph lowercase a");
   const five = resolveTraceGlyph("number", "5");
   assert(five?.glyph === "5" && five.paths.length >= 1, "resolveTraceGlyph number 5");
   assert(listTraceGlyphs("letter").length === 26, "26 letters");
+  assert(listTraceGlyphs("letter", "lower").length === 26, "26 lowercase letters");
   assert(listTraceGlyphs("number").length === 10, "10 digits");
+  assert(letterPaths("a")?.case === "lower", "letterPaths lowercase");
+  assert(letterPaths("A")?.case === "upper", "letterPaths uppercase");
   const d = new Date(2026, 6, 28);
   const g1 = pickDailyTraceGlyph(d);
   const g2 = pickDailyTraceGlyph(d);

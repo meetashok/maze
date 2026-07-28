@@ -2,7 +2,8 @@
  * Trace Letters & Numbers — print-first worksheets + light online practice.
  */
 
-import { celebrate } from "./confetti.js";
+import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
+import { playPop, playBonk } from "./sound.js";
 import {
   dailyTraceSeed,
   copyToClipboard,
@@ -10,15 +11,18 @@ import {
   setGameHash,
   parseGameHash,
   mulberry32,
+  loadStore,
 } from "./common.js";
 import { letterPaths, numberPaths } from "./dots-shapes.js";
 import { getGlyphTip, encourageTipForGlyph } from "./trace-tips.js";
 
-const PRINT_CREDIT = "generated via bit.ly/mazeit";
+const PRINT_CREDIT = "generated via bit.ly/mazeit · meetashok.github.io/maze";
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const LETTERS_LOWER = "abcdefghijklmnopqrstuvwxyz";
 const DIGITS = "0123456789";
 const TRACE_THRESHOLD = 0.07;
 const STROKE_COMPLETE = 0.82;
+const TRACE_PROGRESS_KEY = "trace-practice-progress";
 
 function dist(a, b) {
   return Math.hypot(b.x - a.x, b.y - a.y);
@@ -81,23 +85,32 @@ function directionArrow(path, tx, ty, at = 0.18) {
   return null;
 }
 
-export function resolveTraceGlyph(kind, glyph) {
+export function resolveTraceGlyph(kind, glyph, letterCase = "upper") {
   if (kind === "number") {
     const data = numberPaths(glyph);
     if (!data) return null;
     return { kind: "number", glyph: String(glyph), paths: data.paths, color: data.color, id: `number-${glyph}` };
   }
-  const data = letterPaths(glyph);
+  const wantLower = letterCase === "lower";
+  const ch = wantLower ? String(glyph).toLowerCase() : String(glyph).toUpperCase();
+  const data = letterPaths(ch);
   if (!data) return null;
-  const ch = String(glyph).toUpperCase();
-  return { kind: "letter", glyph: ch, paths: data.paths, color: data.color, id: `letter-${ch.toLowerCase()}` };
+  return {
+    kind: "letter",
+    glyph: ch,
+    paths: data.paths,
+    color: data.color,
+    id: `letter-${ch.toLowerCase()}${wantLower ? "-lower" : ""}`,
+    letterCase: wantLower ? "lower" : "upper",
+  };
 }
 
-export function listTraceGlyphs(kind = "letter") {
+export function listTraceGlyphs(kind = "letter", letterCase = "upper") {
   if (kind === "number") {
     return [...DIGITS].map((g) => resolveTraceGlyph("number", g));
   }
-  return [...LETTERS].map((g) => resolveTraceGlyph("letter", g));
+  const alphabet = letterCase === "lower" ? LETTERS_LOWER : LETTERS;
+  return [...alphabet].map((g) => resolveTraceGlyph("letter", g, letterCase));
 }
 
 export function pickDailyTraceGlyph(date = new Date()) {
@@ -120,6 +133,7 @@ export class TraceApp {
   constructor() {
     this.kind = "letter";
     this.glyph = "A";
+    this.letterCase = "upper";
     this.item = null;
     this.difficulty = "easy";
     this.showArrows = true;
@@ -156,13 +170,20 @@ export class TraceApp {
     this.els = {
       stage: $("trace-stage"),
       status: $("trace-status"),
+      progress: $("trace-progress"),
       completeBanner: $("trace-complete-banner"),
+      celebrate: $("trace-celebrate"),
       picker: $("trace-picker"),
+      pickerToggle: $("trace-picker-toggle"),
       kindButtons: $("trace-kind"),
+      caseButtons: $("trace-case"),
+      caseBlock: $("trace-case-block"),
       difficulty: $("trace-difficulty"),
       btnNew: $("trace-btn-new"),
       btnReset: $("trace-btn-reset"),
       btnDaily: $("trace-btn-daily"),
+      btnPrev: $("trace-btn-prev"),
+      btnNext: $("trace-btn-next"),
       btnShare: $("trace-btn-share"),
       btnPrint: $("trace-btn-print"),
       chkArrows: $("trace-show-arrows"),
@@ -194,14 +215,28 @@ export class TraceApp {
     this.els.printModal?.addEventListener("click", (e) => {
       if (e.target === this.els.printModal) this._closePrintModal();
     });
+    this.els.btnPrev?.addEventListener("click", () => this._stepGlyph(-1));
+    this.els.btnNext?.addEventListener("click", () => this._stepGlyph(1));
+    this.els.pickerToggle?.addEventListener("click", () => this._togglePicker());
 
     this.els.kindButtons?.querySelectorAll("[data-kind]").forEach((btn) => {
       btn.addEventListener("click", () => {
         this.kind = btn.dataset.kind;
         this._syncKindButtons();
+        this._syncCaseVisibility();
         this._buildPicker();
-        const first = this.kind === "number" ? "0" : "A";
+        const first = this.kind === "number" ? "0" : this.letterCase === "lower" ? "a" : "A";
         this._setGlyph(this.kind, first);
+      });
+    });
+
+    this.els.caseButtons?.querySelectorAll("[data-case]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.letterCase = btn.dataset.case === "lower" ? "lower" : "upper";
+        this._syncCaseButtons();
+        this._buildPicker();
+        const ch = this.letterCase === "lower" ? this.glyph.toLowerCase() : this.glyph.toUpperCase();
+        this._setGlyph("letter", ch);
       });
     });
 
@@ -226,6 +261,35 @@ export class TraceApp {
     this.els.chkLines?.addEventListener("change", () => {
       this.showLines = this.els.chkLines.checked;
       this._render();
+    });
+  }
+
+  _togglePicker() {
+    const picker = this.els.picker;
+    const toggle = this.els.pickerToggle;
+    if (!picker || !toggle) return;
+    const open = picker.hidden;
+    picker.hidden = !open;
+    picker.classList.toggle("is-collapsed", !open);
+    toggle.setAttribute("aria-expanded", open ? "true" : "false");
+    toggle.textContent = open
+      ? this.kind === "number"
+        ? "Hide number picker"
+        : "Hide letter picker"
+      : this.kind === "number"
+        ? "Pick a number"
+        : "Pick a letter";
+  }
+
+  _syncCaseVisibility() {
+    if (this.els.caseBlock) this.els.caseBlock.hidden = this.kind !== "letter";
+  }
+
+  _syncCaseButtons() {
+    this.els.caseButtons?.querySelectorAll("[data-case]").forEach((btn) => {
+      const on = btn.dataset.case === this.letterCase;
+      btn.classList.toggle("is-active", on);
+      btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
   }
 
@@ -259,21 +323,50 @@ export class TraceApp {
     const root = this.els.picker;
     if (!root) return;
     root.innerHTML = "";
-    const glyphs = this.kind === "number" ? DIGITS : LETTERS;
+    const practiced = loadStore(TRACE_PROGRESS_KEY);
+    const glyphs =
+      this.kind === "number"
+        ? DIGITS
+        : this.letterCase === "lower"
+          ? LETTERS_LOWER
+          : LETTERS;
     for (const g of glyphs) {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "trace-glyph-btn";
-      btn.textContent = g;
+      const key = this._progressKey(this.kind, g);
+      const stars = practiced[key]?.stars || 0;
+      btn.textContent = stars ? `${g} ★` : g;
       btn.dataset.glyph = g;
-      btn.setAttribute("aria-label", `Trace ${g}`);
+      btn.setAttribute("aria-label", `Trace ${g}${stars ? `, practiced` : ""}`);
       if (g === this.glyph) btn.classList.add("is-active");
+      if (stars) btn.classList.add("is-practiced");
       btn.addEventListener("click", () => {
         this.isDaily = false;
         this._setGlyph(this.kind, g);
       });
       root.appendChild(btn);
     }
+    this._syncCaseVisibility();
+    this._syncCaseButtons();
+  }
+
+  _progressKey(kind, glyph) {
+    return `${kind}:${glyph}`;
+  }
+
+  _stepGlyph(dir) {
+    const glyphs =
+      this.kind === "number"
+        ? [...DIGITS]
+        : this.letterCase === "lower"
+          ? [...LETTERS_LOWER]
+          : [...LETTERS];
+    let idx = glyphs.indexOf(this.glyph);
+    if (idx < 0) idx = 0;
+    idx = (idx + dir + glyphs.length) % glyphs.length;
+    this.isDaily = false;
+    this._setGlyph(this.kind, glyphs[idx]);
   }
 
   _syncPickerActive() {
@@ -283,23 +376,28 @@ export class TraceApp {
   }
 
   _setGlyph(kind, glyph, { sync = true } = {}) {
-    const item = resolveTraceGlyph(kind, glyph);
+    const item = resolveTraceGlyph(kind, glyph, kind === "letter" ? this.letterCase : "upper");
     if (!item) return;
     this.kind = item.kind;
     this.glyph = item.glyph;
+    if (item.letterCase) this.letterCase = item.letterCase;
     this.item = item;
     this._resetPractice(false);
     this._syncKindButtons();
+    this._syncCaseButtons();
+    this._syncCaseVisibility();
     this._syncPickerActive();
     this._updateDailyChip();
+    this._updateProgressLabel();
     this._render();
     if (sync) this._syncUrl();
   }
 
   _pickRandom() {
-    const pool = listTraceGlyphs(this.kind);
+    const pool = listTraceGlyphs(this.kind, this.letterCase);
     const rand = mulberry32((Math.random() * 0xffffffff) >>> 0);
     const item = pool[Math.floor(rand() * pool.length)];
+    if (item.letterCase) this.letterCase = item.letterCase;
     this._setGlyph(item.kind, item.glyph);
   }
 
@@ -307,6 +405,7 @@ export class TraceApp {
     const item = pickDailyTraceGlyph();
     this.isDaily = true;
     this.difficulty = "easy";
+    this.letterCase = item.letterCase || "upper";
     this._syncDifficultyButtons();
     this._syncGuideTogglesFromDifficulty();
     this.kind = item.kind;
@@ -317,6 +416,7 @@ export class TraceApp {
   _resetPractice(render = true) {
     this._stopCelebrate?.();
     this._stopCelebrate = null;
+    hideCelebrationOverlay(this.els.celebrate);
     this.strokeIndex = 0;
     this.completed = false;
     this.maxProgress = 0;
@@ -326,7 +426,37 @@ export class TraceApp {
     this._pointerId = null;
     if (this.els.completeBanner) this.els.completeBanner.hidden = true;
     this._updateStatus();
+    this._updateProgressLabel();
     if (render) this._render();
+  }
+
+  _updateProgressLabel() {
+    if (!this.els.progress) return;
+    const store = loadStore(TRACE_PROGRESS_KEY);
+    const practiced = Object.keys(store).filter((k) => k.startsWith("letter:") || k.startsWith("number:")).length;
+    const key = this._progressKey(this.kind, this.glyph);
+    const stars = store[key]?.stars || 0;
+    this.els.progress.textContent = stars
+      ? `Practiced ${this.glyph}: ${"★".repeat(stars)}${"☆".repeat(3 - stars)} · ${practiced} glyphs total`
+      : practiced
+        ? `${practiced} glyphs practiced — keep going!`
+        : "Trace to earn stars";
+  }
+
+  _recordPractice() {
+    try {
+      const store = loadStore(TRACE_PROGRESS_KEY);
+      const key = this._progressKey(this.kind, this.glyph);
+      const prev = store[key] || { count: 0, stars: 0 };
+      const count = (prev.count || 0) + 1;
+      const stars = Math.min(3, Math.max(prev.stars || 0, count >= 3 ? 3 : count));
+      store[key] = { count, stars, at: Date.now() };
+      localStorage.setItem(TRACE_PROGRESS_KEY, JSON.stringify(store));
+    } catch {
+      /* ignore */
+    }
+    this._buildPicker();
+    this._updateProgressLabel();
   }
 
   _updateStatus() {
@@ -386,7 +516,11 @@ export class TraceApp {
       return;
     }
     const kind = params.get("kind") === "number" ? "number" : "letter";
-    const glyph = params.get("glyph") || (kind === "number" ? "0" : "A");
+    const letterCase = params.get("case") === "lower" ? "lower" : "upper";
+    this.letterCase = letterCase;
+    const glyph =
+      params.get("glyph") ||
+      (kind === "number" ? "0" : letterCase === "lower" ? "a" : "A");
     const diff = params.get("diff");
     if (diff === "easy" || diff === "medium" || diff === "hard") {
       this.difficulty = diff;
@@ -435,12 +569,14 @@ export class TraceApp {
       const near = nearestOnPath(stroke, pt);
       if (near.dist > TRACE_THRESHOLD * 1.4 || near.progress > 0.25) {
         this._toast("Start at the glowing green dot");
+        playBonk();
         return;
       }
       this.drawing = true;
       this._pointerId = e.pointerId;
       this.maxProgress = near.progress;
       this.ink = [pt];
+      playPop();
       try {
         svg.setPointerCapture(e.pointerId);
       } catch {
@@ -460,6 +596,7 @@ export class TraceApp {
         this.ink = [];
         this._render();
         this._toast("Stay on the dashed line");
+        playBonk();
         return;
       }
       this.maxProgress = Math.max(this.maxProgress, near.progress);
@@ -477,6 +614,7 @@ export class TraceApp {
         this.ink = [];
         this.maxProgress = 0;
         this.strokeIndex += 1;
+        playPop();
         if (this.strokeIndex >= this.item.paths.length) {
           this._complete();
         } else {
@@ -488,6 +626,7 @@ export class TraceApp {
         this.maxProgress = 0;
         this._render();
         this._toast("Keep going along the line");
+        playBonk();
       }
       e.preventDefault();
     };
@@ -514,10 +653,22 @@ export class TraceApp {
 
   _complete() {
     this.completed = true;
+    this._recordPractice();
     this._updateStatus();
-    if (this.els.completeBanner) this.els.completeBanner.hidden = false;
+    if (this.els.completeBanner) {
+      this.els.completeBanner.hidden = false;
+      this.els.completeBanner.textContent = `You wrote ${this.glyph}! 🎉`;
+    }
     this._render();
-    this._stopCelebrate = celebrate(this.els.stage);
+    this._stopCelebrate = celebrate(document.body, 3200);
+    showCelebrationOverlay(this.els.celebrate, {
+      emoji: "✏️",
+      detail: `You wrote the ${this.kind === "number" ? "number" : "letter"} ${this.glyph}!`,
+      againLabel: "Try Again",
+      newLabel: this.kind === "number" ? "Next Number" : "Next Letter",
+      onAgain: () => this._resetPractice(),
+      onNew: () => this._stepGlyph(1),
+    });
   }
 
   _renderGlyphSvg({ item, options, interactive = false, compact = false, showInk = true }) {
@@ -663,6 +814,7 @@ export class TraceApp {
     return {
       glyph: this.glyph,
       kind: this.kind !== "letter" ? this.kind : undefined,
+      case: this.kind === "letter" && this.letterCase === "lower" ? "lower" : undefined,
       diff: this.difficulty !== "easy" ? this.difficulty : undefined,
       daily: this.isDaily ? "1" : undefined,
     };

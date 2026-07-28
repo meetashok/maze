@@ -199,7 +199,8 @@ export class MazeRenderer {
     if (!this.layers.icons || !this.maze) return;
     this.layers.icons.innerHTML = "";
     const { start, end } = this.maze;
-    const fontSize = Math.max(12, this.cellSize * 0.55);
+    // Keep frog/bug readable even on large grids (may slightly overflow the cell).
+    const fontSize = Math.max(32, this.cellSize * 0.7);
 
     const place = (cell, emoji, cls) => {
       const { x, y } = this.cellCenter(cell.r, cell.c);

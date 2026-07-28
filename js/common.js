@@ -74,6 +74,7 @@ export async function copyToClipboard(text) {
 
 /** Path segment for each internal game id (URLs users see). */
 export const GAME_PATHS = {
+  home: "",
   mazes: "maze",
   dots: "connect",
   trace: "trace",
@@ -91,6 +92,7 @@ export const PATH_TO_GAME = {
 /**
  * Resolve site base + active game from the location.
  * Handles GitHub project pages (/&lt;repo&gt;/connect) where the repo may be named "maze".
+ * No game segment → "home" (landing page).
  */
 export function resolveLocation() {
   const parts = window.location.pathname.split("/").filter(Boolean);
@@ -105,7 +107,7 @@ export function resolveLocation() {
     }
     return {
       base: `/${repo}/`,
-      game: gameSeg ? PATH_TO_GAME[gameSeg] : "mazes",
+      game: gameSeg ? PATH_TO_GAME[gameSeg] : "home",
     };
   }
 
@@ -118,7 +120,7 @@ export function resolveLocation() {
   }
   return {
     base: copy.length ? `/${copy.join("/")}/` : "/",
-    game: gameSeg ? PATH_TO_GAME[gameSeg] : "mazes",
+    game: gameSeg ? PATH_TO_GAME[gameSeg] : "home",
   };
 }
 
@@ -181,6 +183,9 @@ export function parseGameHash() {
 
 export function buildGameUrl(game, params = {}) {
   const base = getBasePath();
+  if (game === "home" || !game) {
+    return new URL(base, window.location.origin).toString();
+  }
   const seg = GAME_PATHS[game] || "maze";
   const sp = paramsFromObject(params);
   const q = sp.toString();
@@ -190,10 +195,15 @@ export function buildGameUrl(game, params = {}) {
 
 export function setGameRoute(game, params = {}, replace = true) {
   const base = getBasePath();
-  const seg = GAME_PATHS[game] || "maze";
-  const sp = paramsFromObject(params);
-  const q = sp.toString();
-  const url = `${base}${seg}${q ? `?${q}` : ""}`;
+  let url;
+  if (game === "home" || !game) {
+    url = base;
+  } else {
+    const seg = GAME_PATHS[game] || "maze";
+    const sp = paramsFromObject(params);
+    const q = sp.toString();
+    url = `${base}${seg}${q ? `?${q}` : ""}`;
+  }
   if (replace) history.replaceState(null, "", url);
   else history.pushState(null, "", url);
 }

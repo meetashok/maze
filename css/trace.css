@@ -163,14 +163,45 @@
 }
 
 .trace-rule {
-  stroke: var(--line);
-  stroke-width: 0.45;
-  opacity: 0.7;
+  stroke: #7ec8e3;
+  stroke-width: 0.85;
+  opacity: 0.95;
 }
 
 .trace-rule.mid {
-  stroke-dasharray: 1.5 1.5;
-  opacity: 0.55;
+  stroke: #7ec8e3;
+  stroke-dasharray: 1.8 1.6;
+  stroke-width: 0.7;
+  opacity: 0.85;
+}
+
+.trace-stepper {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.trace-progress {
+  margin: 0;
+  font-weight: 800;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.trace-picker[hidden] {
+  display: none !important;
+}
+
+.trace-glyph-btn.is-practiced {
+  border-color: var(--sun);
+}
+
+.trace-panel {
+  position: relative;
+}
+
+.trace-stage {
+  overscroll-behavior: none;
 }
 
 .trace-guide {

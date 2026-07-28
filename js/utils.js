@@ -42,8 +42,24 @@ export function difficultyLabel(size) {
   return "Expert";
 }
 
+/** Friendly size blurb for kids/parents. */
+export function difficultyKidLabel(size) {
+  if (size <= 6) return "Tiny maze!";
+  if (size <= 10) return "Getting bigger!";
+  if (size <= 14) return "That's a big maze!";
+  return "Whoa, mega maze!";
+}
+
+/** Preset sizes for the kid-friendly difficulty row. */
+export const DIFFICULTY_PRESETS = [
+  { size: 5, label: "Easy", emoji: "😊", level: "easy" },
+  { size: 8, label: "Medium", emoji: "🤔", level: "medium" },
+  { size: 12, label: "Hard", emoji: "😤", level: "hard" },
+  { size: 16, label: "Expert", emoji: "🤯", level: "expert" },
+];
+
 export function detourLabel(detour) {
-  const labels = ["Simple", "Branchy", "Tricky", "Expert"];
+  const labels = ["Simple", "Lots of paths", "Tricky dead ends", "Very tricky"];
   const d = Math.max(0, Math.min(3, detour | 0));
   return labels[d];
 }
