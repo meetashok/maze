@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Kid-friendly maze puzzle generator — draw your path, share mazes, print worksheets." />
+    <meta name="theme-color" content="#2a9d8f" />
+    <title>Maze Play — Puzzle Generator</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;550;700&family=Nunito:wght@500;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <header class="top-bar">
+        <div class="brand-block">
+          <p class="brand">Maze Play</p>
+          <p class="tagline">Trace, solve, celebrate</p>
+        </div>
+        <p id="brand-date" class="daily-chip" hidden></p>
+      </header>
+
+      <main class="main">
+        <section class="maze-panel" aria-label="Maze">
+          <div id="maze-stage" class="maze-stage" tabindex="0"></div>
+          <p id="record-banner" class="record-banner" hidden>New Record!</p>
+        </section>
+
+        <section class="primary-actions" aria-label="Main actions">
+          <button type="button" id="btn-new" class="btn btn-primary">New Maze</button>
+          <button type="button" id="btn-clear" class="btn btn-secondary">Clear Path</button>
+          <button type="button" id="btn-daily" class="btn btn-secondary">Daily Maze</button>
+        </section>
+
+        <section class="toolbar" aria-label="Controls">
+          <div class="control-block size-block">
+            <label for="size-range" class="control-label">
+              Size
+              <span id="size-value" class="size-value">8×8</span>
+              <span id="difficulty-label" class="difficulty" data-level="medium">Medium</span>
+            </label>
+            <input
+              id="size-range"
+              class="size-range"
+              type="range"
+              min="4"
+              max="20"
+              value="8"
+              step="1"
+            />
+          </div>
+
+          <div class="btn-row">
+            <button type="button" id="btn-hint" class="btn btn-ghost">Show Hint</button>
+            <button type="button" id="btn-solution" class="btn btn-ghost" aria-pressed="false">
+              Show Solution
+            </button>
+          </div>
+
+          <div class="btn-row">
+            <button type="button" id="btn-icons" class="btn btn-ghost">Icons</button>
+            <button type="button" id="btn-share" class="btn btn-ghost">Share</button>
+            <button type="button" id="btn-print" class="btn btn-ghost">Print</button>
+          </div>
+
+          <div class="timer-row">
+            <label class="toggle">
+              <input type="checkbox" id="timer-toggle" checked />
+              <span>Timer</span>
+            </label>
+            <span id="timer-display" class="timer-display">0:00.0</span>
+            <span id="best-display" class="best-display">Best: —</span>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>Draw a path from start to finish. Drag backward to undo.</p>
+      </footer>
+    </div>
+
+    <!-- Icon picker -->
+    <div id="icon-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="icon-modal-title">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h2 id="icon-modal-title">Pick icons</h2>
+          <button type="button" id="icon-modal-close" class="btn btn-icon" aria-label="Close">×</button>
+        </header>
+        <div id="icon-grid" class="icon-grid"></div>
+      </div>
+    </div>
+
+    <!-- Print options -->
+    <div id="print-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="print-modal-title">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h2 id="print-modal-title">Print maze</h2>
+          <button type="button" id="print-modal-close" class="btn btn-icon" aria-label="Close">×</button>
+        </header>
+        <fieldset class="print-fieldset">
+          <legend>Solution</legend>
+          <label class="radio">
+            <input type="radio" name="print-solution" value="no" checked />
+            Without solution
+          </label>
+          <label class="radio">
+            <input type="radio" name="print-solution" value="yes" />
+            With solution
+          </label>
+        </fieldset>
+        <fieldset class="print-fieldset">
+          <legend>Layout</legend>
+          <label class="radio">
+            <input type="radio" name="print-layout" value="single" checked />
+            One large maze
+          </label>
+          <label class="radio">
+            <input type="radio" name="print-layout" value="4" />
+            Worksheet — 4 mazes (2×2)
+          </label>
+          <label class="radio">
+            <input type="radio" name="print-layout" value="6" />
+            Worksheet — 6 mazes (2×3)
+          </label>
+        </fieldset>
+        <button type="button" id="print-go" class="btn btn-primary btn-block">Print</button>
+      </div>
+    </div>
+
+    <div id="toast" class="toast" hidden role="status"></div>
+
+    <!-- Print-only sheet -->
+    <div id="print-sheet" class="print-sheet" hidden></div>
+
+    <script type="module" src="js/ui.js"></script>
+  </body>
+</html>
