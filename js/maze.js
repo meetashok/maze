@@ -1,5 +1,5 @@
 /**
- * Maze generation (recursive backtracking) and BFS solving.
+ * Maze generation (multiple algorithms) and BFS solving.
  */
 
 import { mulberry32 } from "./utils.js";
@@ -16,6 +16,9 @@ const DIRS = [
   { bit: W, opp: E, dr: 0, dc: -1 },
 ];
 
+const MAX_QUALITY_ATTEMPTS = 16;
+const BRAID_PROB = 0.1;
+
 function shuffle(arr, rand) {
   for (let i = arr.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -24,46 +27,256 @@ function shuffle(arr, rand) {
   return arr;
 }
 
-/**
- * @returns {{ size: number, seed: number, cells: number[][], start: {r:number,c:number}, end: {r:number,c:number} }}
- */
-export function generateMaze(size, seed) {
-  const n = Math.max(4, Math.min(20, size | 0));
-  const s = (seed >>> 0) || 1;
-  const rand = mulberry32(s);
-  const cells = Array.from({ length: n }, () =>
+function emptyGrid(n) {
+  return Array.from({ length: n }, () =>
     Array.from({ length: n }, () => N | E | S | W)
   );
+}
 
-  const visited = Array.from({ length: n }, () => Array(n).fill(false));
+function removeWall(cells, r, c, d) {
+  cells[r][c] &= ~d.bit;
+  cells[r + d.dr][c + d.dc] &= ~d.opp;
+}
 
-  function carve(r, c) {
-    visited[r][c] = true;
-    const order = shuffle([...DIRS], rand);
-    for (const d of order) {
-      const nr = r + d.dr;
-      const nc = c + d.dc;
-      if (nr < 0 || nc < 0 || nr >= n || nc >= n) continue;
-      if (visited[nr][nc]) continue;
-      cells[r][c] &= ~d.bit;
-      cells[nr][nc] &= ~d.opp;
-      carve(nr, nc);
-    }
-  }
+function openCount(cells, r, c) {
+  const w = cells[r][c];
+  return 4 - ((w & N ? 1 : 0) + (w & E ? 1 : 0) + (w & S ? 1 : 0) + (w & W ? 1 : 0));
+}
 
-  carve(0, 0);
-
-  // Open outer walls at entrance (top) and exit (bottom) for readability
+function finishMaze(cells, n, seed, detour) {
   cells[0][0] &= ~N;
   cells[n - 1][n - 1] &= ~S;
-
   return {
     size: n,
-    seed: s,
+    seed,
+    detour,
     cells,
     start: { r: 0, c: 0 },
     end: { r: n - 1, c: n - 1 },
   };
+}
+
+/** Count junctions (3+ ways) and dead ends (1 way) for difficulty tuning. */
+export function analyzeMaze(maze) {
+  const { cells } = maze;
+  const n = cells.length;
+  let junctions = 0;
+  let deadEnds = 0;
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const deg = openCount(cells, r, c);
+      if (deg >= 3) junctions++;
+      if (deg === 1) deadEnds++;
+    }
+  }
+  return { junctions, deadEnds };
+}
+
+function minStats(n, detour) {
+  if (detour >= 3) {
+    return {
+      junctions: Math.max(4, Math.floor(n * 0.55)),
+      deadEnds: Math.max(6, Math.floor(n * 1.1)),
+    };
+  }
+  if (detour >= 2) {
+    return {
+      junctions: Math.max(3, Math.floor(n * 0.4)),
+      deadEnds: Math.max(4, Math.floor(n * 0.75)),
+    };
+  }
+  return { junctions: 0, deadEnds: 0 };
+}
+
+function passesQuality(maze, detour) {
+  const mins = minStats(maze.size, detour);
+  if (!mins.junctions && !mins.deadEnds) return true;
+  const { junctions, deadEnds } = analyzeMaze(maze);
+  return junctions >= mins.junctions && deadEnds >= mins.deadEnds;
+}
+
+function carveDFS(n, rand) {
+  const cells = emptyGrid(n);
+  const visited = Array.from({ length: n }, () => Array(n).fill(false));
+
+  function carve(r, c) {
+    visited[r][c] = true;
+    for (const d of shuffle([...DIRS], rand)) {
+      const nr = r + d.dr;
+      const nc = c + d.dc;
+      if (nr < 0 || nc < 0 || nr >= n || nc >= n || visited[nr][nc]) continue;
+      removeWall(cells, r, c, d);
+      carve(nr, nc);
+    }
+  }
+  carve(0, 0);
+  return cells;
+}
+
+function carveWilson(n, rand) {
+  const cells = emptyGrid(n);
+  const inMaze = Array.from({ length: n }, () => Array(n).fill(false));
+  inMaze[0][0] = true;
+
+  let unvisited = n * n - 1;
+  while (unvisited > 0) {
+    let sr = 0;
+    let sc = 0;
+    outer: for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (!inMaze[r][c]) {
+          sr = r;
+          sc = c;
+          break outer;
+        }
+      }
+    }
+
+    const path = [{ r: sr, c: sc }];
+    const pathMap = new Map([[`${sr},${sc}`, 0]]);
+    let cr = sr;
+    let cc = sc;
+
+    while (!inMaze[cr][cc]) {
+      const options = DIRS.filter((d) => {
+        const nr = cr + d.dr;
+        const nc = cc + d.dc;
+        return nr >= 0 && nc >= 0 && nr < n && nc < n;
+      });
+      if (!options.length) break;
+      const d = options[Math.floor(rand() * options.length)];
+      const nr = cr + d.dr;
+      const nc = cc + d.dc;
+      cr = nr;
+      cc = nc;
+      const key = `${cr},${cc}`;
+      if (pathMap.has(key)) {
+        const idx = pathMap.get(key);
+        path.length = idx + 1;
+        pathMap.clear();
+        path.forEach((p, i) => pathMap.set(`${p.r},${p.c}`, i));
+      } else {
+        pathMap.set(key, path.length);
+        path.push({ r: cr, c: cc });
+      }
+    }
+
+    for (let i = 0; i < path.length - 1; i++) {
+      const a = path[i];
+      const b = path[i + 1];
+      const dr = b.r - a.r;
+      const dc = b.c - a.c;
+      const d = DIRS.find((x) => x.dr === dr && x.dc === dc);
+      if (d) removeWall(cells, a.r, a.c, d);
+    }
+    for (const p of path) {
+      if (!inMaze[p.r][p.c]) {
+        inMaze[p.r][p.c] = true;
+        unvisited--;
+      }
+    }
+  }
+  return cells;
+}
+
+class UnionFind {
+  constructor(n) {
+    this.parent = Array.from({ length: n }, (_, i) => i);
+    this.rank = Array(n).fill(0);
+  }
+  find(x) {
+    if (this.parent[x] !== x) this.parent[x] = this.find(this.parent[x]);
+    return this.parent[x];
+  }
+  union(a, b) {
+    const ra = this.find(a);
+    const rb = this.find(b);
+    if (ra === rb) return false;
+    if (this.rank[ra] < this.rank[rb]) this.parent[ra] = rb;
+    else if (this.rank[ra] > this.rank[rb]) this.parent[rb] = ra;
+    else {
+      this.parent[rb] = ra;
+      this.rank[ra]++;
+    }
+    return true;
+  }
+}
+
+function carveKruskal(n, rand) {
+  const cells = emptyGrid(n);
+  const uf = new UnionFind(n * n);
+  const edges = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      const id = r * n + c;
+      if (c + 1 < n) edges.push({ r, c, d: DIRS[1], a: id, b: id + 1 });
+      if (r + 1 < n) edges.push({ r, c, d: DIRS[2], a: id, b: id + n });
+    }
+  }
+  shuffle(edges, rand);
+  for (const e of edges) {
+    if (uf.union(e.a, e.b)) removeWall(cells, e.r, e.c, e.d);
+  }
+  return cells;
+}
+
+/** Light braiding: remove some dead-end walls to add loops (expert only). */
+function braidMaze(cells, n, rand, prob = BRAID_PROB) {
+  const dead = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (openCount(cells, r, c) === 1) dead.push({ r, c });
+    }
+  }
+  shuffle(dead, rand);
+  for (const cell of dead) {
+    if (rand() >= prob) continue;
+    if (openCount(cells, cell.r, cell.c) !== 1) continue;
+    const options = DIRS.filter((d) => {
+      const nr = cell.r + d.dr;
+      const nc = cell.c + d.dc;
+      if (nr < 0 || nc < 0 || nr >= n || nc >= n) return false;
+      return (cells[cell.r][cell.c] & d.bit) !== 0;
+    });
+    if (!options.length) continue;
+    const d = options[Math.floor(rand() * options.length)];
+    removeWall(cells, cell.r, cell.c, d);
+  }
+}
+
+function buildCells(n, seed, detour) {
+  const rand = mulberry32(seed);
+  if (detour <= 0) return carveDFS(n, rand);
+  if (detour === 1) return carveWilson(n, rand);
+  const cells = carveKruskal(n, rand);
+  if (detour >= 3) braidMaze(cells, n, rand, BRAID_PROB);
+  return cells;
+}
+
+/**
+ * @param {number} size grid dimension 4–20
+ * @param {number} seed PRNG seed
+ * @param {number} [detour=1] 0 Simple, 1 Branchy, 2 Tricky, 3 Expert
+ */
+export function generateMaze(size, seed, detour = 1) {
+  const n = Math.max(4, Math.min(20, size | 0));
+  const s = (seed >>> 0) || 1;
+  const d = Math.max(0, Math.min(3, detour | 0));
+
+  if (d < 2) {
+    const cells = buildCells(n, s, d);
+    return finishMaze(cells, n, s, d);
+  }
+
+  for (let attempt = 0; attempt < MAX_QUALITY_ATTEMPTS; attempt++) {
+    const trySeed = (s + attempt) >>> 0;
+    const cells = buildCells(n, trySeed, d);
+    const maze = finishMaze(cells, n, s, d);
+    if (passesQuality(maze, d)) return maze;
+  }
+
+  const cells = buildCells(n, s, d);
+  return finishMaze(cells, n, s, d);
 }
 
 export function canMove(cells, r, c, nr, nc) {
@@ -128,29 +341,23 @@ export function solveBFS(maze) {
 
 /**
  * Next hint steps from current position along the solution path.
- * If current is not on the solution, find nearest solution cell via BFS then continue.
  */
 export function getHintSteps(maze, solution, current, count = 4) {
   if (!solution.length || !current) return [];
 
   let idx = solution.findIndex((p) => p.r === current.r && p.c === current.c);
   if (idx === -1) {
-    // Walk toward solution: find first solution cell reachable as next open neighbor preference
-    // Fall back to start of solution from nearest point
     const onPath = findNearestSolutionIndex(maze, solution, current);
     if (onPath === -1) return solution.slice(0, Math.min(count, solution.length));
     idx = onPath;
-    // Include the nearest solution cell as first hint step if not current
     const steps = [];
     const target = solution[idx];
     if (target.r !== current.r || target.c !== current.c) {
-      // Build short path from current to that solution cell
       const bridge = shortestPathBetween(maze, current, target);
       for (let i = 1; i < bridge.length && steps.length < count; i++) {
         steps.push(bridge[i]);
       }
       if (steps.length >= count) return steps;
-      // Continue along solution after target
       for (let i = idx + 1; i < solution.length && steps.length < count; i++) {
         steps.push(solution[i]);
       }

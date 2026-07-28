@@ -8,10 +8,11 @@ Kid-friendly maze puzzle generator. Help the frog 🐸 reach the bug 🐛 so it 
 
 1. Start at the frog (top-left) and drag through open corridors to the bug (bottom-right).
 2. Drag backward along your path to undo. **Clear Path** resets the trail without changing the maze.
-3. **New Maze** builds a fresh random maze. **Daily Maze** is the same 8×8 puzzle for everyone today.
-4. **Show Hint** reveals the next few steps. **Show Solution** draws the full shortest path.
-5. Beat your personal best with the optional timer (saved in your browser).
-6. Use the sun/moon button for light or dark theme.
+3. **New Maze** builds a fresh random maze. **Daily Maze** is the same 8×8 Tricky puzzle for everyone today.
+4. Pick a **Style** — Simple, Branchy, Tricky, or Expert — to change how twisty the corridors feel (independent of grid size).
+5. **Show Hint** reveals the next few steps. **Show Solution** draws the full shortest path.
+6. Beat your personal best with the optional timer (saved in your browser).
+7. Use the sun/moon button for light or dark theme.
 
 ## Open locally
 
@@ -27,20 +28,22 @@ Then visit the URL printed in the terminal (ES modules need a local server in so
 
 Configuration is stored in the query string:
 
-| Param   | Meaning                                      |
-|---------|----------------------------------------------|
-| `size`  | Grid size 4–20                               |
-| `seed`  | Unsigned integer seed for generation         |
-| `start` | Start emoji (URL-encoded)                    |
-| `end`   | End emoji (URL-encoded)                      |
-| `daily` | `1` marks the daily maze                     |
+| Param    | Meaning                                      |
+|----------|----------------------------------------------|
+| `size`   | Grid size 4–20                               |
+| `seed`   | Unsigned integer seed for generation         |
+| `detour` | Style 0–3: Simple, Branchy, Tricky, Expert  |
+| `start`  | Start emoji (URL-encoded)                    |
+| `end`    | End emoji (URL-encoded)                      |
+| `daily`  | `1` marks the daily maze                     |
 
-Example: `?size=8&seed=12345&start=%F0%9F%90%B8&end=%F0%9F%90%9B`
+Example: `?size=8&seed=12345&detour=2&start=%F0%9F%90%B8&end=%F0%9F%90%9B`
 
 ## Features (v1)
 
-- Recursive-backtracking mazes (always solvable) with seeded PRNG
-- Difficulty bands: Easy 4–6, Medium 7–10, Hard 11–14, Expert 15–20
+- Multiple maze styles (DFS, Wilson, Kruskal + quality filter, light braiding) with seeded PRNG
+- Grid size difficulty bands: Easy 4–6, Medium 7–10, Hard 11–14, Expert 15–20
+- Style buttons: Simple / Branchy / Tricky / Expert (more dead ends and junctions at higher levels)
 - Touch + mouse path tracing, wall collision feedback, celebration
 - Icon picker, share link, timer + personal bests (`localStorage`)
 - Light / dark theme toggle

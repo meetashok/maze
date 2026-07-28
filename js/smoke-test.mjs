@@ -4,15 +4,17 @@
  * (or: node js/smoke-test.mjs with import assertions)
  */
 
-import { generateMaze, solveBFS, canMove, getHintSteps } from "./maze.js";
+import { generateMaze, solveBFS, canMove, getHintSteps, analyzeMaze } from "./maze.js";
 import {
   mulberry32,
   hashString,
   dailySeed,
   deriveSeed,
   difficultyLabel,
+  detourLabel,
   formatTime,
   DAILY_SIZE,
+  DAILY_DETOUR,
 } from "./utils.js";
 
 let failed = 0;
@@ -75,6 +77,21 @@ function assert(cond, msg) {
   }
 }
 
+// Detour determinism
+{
+  const a = generateMaze(10, 42, 2);
+  const b = generateMaze(10, 42, 2);
+  assert(
+    JSON.stringify(a.cells) === JSON.stringify(b.cells),
+    "same seed+size+detour => same maze"
+  );
+  const c = generateMaze(10, 42, 0);
+  assert(
+    JSON.stringify(a.cells) !== JSON.stringify(c.cells),
+    "different detour => different maze"
+  );
+}
+
 // Daily seed stable
 {
   const d = new Date(2026, 6, 28); // local Jul 28 2026
@@ -82,6 +99,7 @@ function assert(cond, msg) {
   const s2 = dailySeed(d);
   assert(s1 === s2 && s1 > 0, "daily seed stable");
   assert(DAILY_SIZE === 8, "daily size is 8");
+  assert(DAILY_DETOUR === 2, "daily detour is 2 (Tricky)");
 }
 
 // PRNG range
@@ -104,12 +122,42 @@ function assert(cond, msg) {
   assert(hints[0].r === sol[1].r && hints[0].c === sol[1].c, "hint follows solution");
 }
 
-// Difficulty + format
+// Higher detour tends to more dead ends and junctions
+{
+  const n = 12;
+  const samples = 20;
+  let sumSimpleDead = 0;
+  let sumExpertDead = 0;
+  let sumSimpleJunctions = 0;
+  let sumExpertJunctions = 0;
+  for (let i = 0; i < samples; i++) {
+    const simple = analyzeMaze(generateMaze(n, 1000 + i, 0));
+    const expert = analyzeMaze(generateMaze(n, 1000 + i, 3));
+    sumSimpleDead += simple.deadEnds;
+    sumExpertDead += expert.deadEnds;
+    sumSimpleJunctions += simple.junctions;
+    sumExpertJunctions += expert.junctions;
+  }
+  assert(
+    sumExpertDead / samples > sumSimpleDead / samples,
+    "expert style averages more dead ends than simple"
+  );
+  assert(
+    sumExpertJunctions / samples > sumSimpleJunctions / samples,
+    "expert style averages more junctions than simple"
+  );
+}
+
+// Labels
 {
   assert(difficultyLabel(4) === "Easy", "easy");
   assert(difficultyLabel(8) === "Medium", "medium");
   assert(difficultyLabel(12) === "Hard", "hard");
   assert(difficultyLabel(20) === "Expert", "expert");
+  assert(detourLabel(0) === "Simple", "simple style");
+  assert(detourLabel(1) === "Branchy", "branchy style");
+  assert(detourLabel(2) === "Tricky", "tricky style");
+  assert(detourLabel(3) === "Expert", "expert style");
   assert(formatTime(65000) === "1:05.0", "formatTime");
 }
 
