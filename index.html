@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="light">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Kid-friendly maze puzzle generator — draw your path, share mazes, print worksheets." />
+    <meta name="description" content="Kid-friendly maze puzzle — help the frog reach the bug!" />
     <meta name="theme-color" content="#2a9d8f" />
     <title>Maze Play — Puzzle Generator</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -13,15 +13,30 @@
       rel="stylesheet"
     />
     <link rel="stylesheet" href="css/styles.css" />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("maze-theme");
+          if (t === "dark") document.documentElement.setAttribute("data-theme", "dark");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div class="app">
       <header class="top-bar">
         <div class="brand-block">
           <p class="brand">Maze Play</p>
-          <p class="tagline">Trace, solve, celebrate</p>
+          <p class="tagline">Help the frog reach the bug</p>
         </div>
-        <p id="brand-date" class="daily-chip" hidden></p>
+        <div class="top-bar-actions">
+          <p id="brand-date" class="daily-chip" hidden></p>
+          <label class="theme-swap" aria-label="Toggle light or dark theme" title="Light / dark">
+            <input type="checkbox" id="theme-toggle" checked />
+            <span class="theme-icon theme-icon-sun" aria-hidden="true">☀</span>
+            <span class="theme-icon theme-icon-moon" aria-hidden="true">☾</span>
+          </label>
+        </div>
       </header>
 
       <main class="main">
@@ -79,7 +94,13 @@
       </main>
 
       <footer class="footer">
-        <p>Draw a path from start to finish. Drag backward to undo.</p>
+        <p class="footer-howto">Trace a path so the frog can eat the bug. Drag backward to undo.</p>
+        <p class="footer-meta">
+          Open source on
+          <a href="https://github.com/meetashok/maze" target="_blank" rel="noopener noreferrer">GitHub</a>
+          · Feedback?
+          <a href="mailto:ashok.iitb@gmail.com?subject=Maze%20Play%20feedback">Send it here</a>
+        </p>
       </footer>
     </div>
 

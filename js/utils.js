@@ -40,7 +40,7 @@ export function dailySeed(date = new Date()) {
 export const DAILY_SIZE = 8;
 
 export const DEFAULT_START = "🐸";
-export const DEFAULT_END = "⭐";
+export const DEFAULT_END = "🐛";
 
 export function difficultyLabel(size) {
   if (size <= 6) return "Easy";

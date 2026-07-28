@@ -23,11 +23,15 @@ import {
 } from "./utils.js";
 
 const ICON_OPTIONS = [
-  "🐸", "🐱", "🐶", "🐰", "🦊", "🐻", "🐼", "🦁",
-  "🐷", "🐵", "🦄", "🐝", "🐢", "🐙", "🦋", "🐦",
-  "⭐", "🌟", "🌈", "🍎", "🍓", "🥕", "🍦", "🍪",
-  "🎈", "🎁", "🚀", "🏡", "⚽", "🌼", "💎", "🔔",
+  "🐸", "🐛", "🐱", "🐶", "🐰", "🦊", "🐻", "🐼",
+  "🦁", "🐷", "🐵", "🦄", "🐝", "🐢", "🐙", "🦋",
+  "🐦", "⭐", "🌟", "🌈", "🍎", "🍓", "🥕", "🍦",
+  "🍪", "🎈", "🎁", "🚀", "🏡", "⚽", "🌼", "💎",
 ];
+
+const THEME_KEY = "maze-theme";
+const THEME_LIGHT = "light";
+const THEME_DARK = "dark";
 
 const HINT_STEPS = 4;
 
@@ -67,6 +71,7 @@ export class MazeApp {
     });
     this.tracer.attach(this.els.mazeStage);
 
+    this._initTheme();
     this._bindControls();
     this._buildIconGrid();
     this._loadFromUrlOrDefault();
@@ -88,6 +93,7 @@ export class MazeApp {
       btnShare: $("btn-share"),
       btnPrint: $("btn-print"),
       btnIcons: $("btn-icons"),
+      themeToggle: $("theme-toggle"),
       timerToggle: $("timer-toggle"),
       timerDisplay: $("timer-display"),
       bestDisplay: $("best-display"),
@@ -102,6 +108,26 @@ export class MazeApp {
       printSheet: $("print-sheet"),
       brandDate: $("brand-date"),
     };
+  }
+
+  _initTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    const theme = saved === THEME_DARK ? THEME_DARK : THEME_LIGHT;
+    this._applyTheme(theme);
+    if (this.els.themeToggle) {
+      this.els.themeToggle.checked = theme === THEME_LIGHT;
+      this.els.themeToggle.addEventListener("change", () => {
+        const next = this.els.themeToggle.checked ? THEME_LIGHT : THEME_DARK;
+        this._applyTheme(next);
+        localStorage.setItem(THEME_KEY, next);
+      });
+    }
+  }
+
+  _applyTheme(theme) {
+    document.documentElement.setAttribute("data-theme", theme);
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.content = theme === THEME_DARK ? "#0f1c24" : "#2a9d8f";
   }
 
   _bindControls() {

@@ -28,7 +28,7 @@ export class MazeRenderer {
     this.cellSize = 40;
     this.pad = 12;
     this.startIcon = "🐸";
-    this.endIcon = "⭐";
+    this.endIcon = "🐛";
     this._collisionTimer = null;
   }
 
