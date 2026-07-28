@@ -42,11 +42,14 @@
         </div>
       </header>
 
-      <nav class="game-tabs" aria-label="Games">
-        <button type="button" id="tab-mazes" class="game-tab is-active" aria-selected="true">Mazes</button>
-        <button type="button" id="tab-dots" class="game-tab" aria-selected="false">Connect the Dots</button>
-        <button type="button" id="tab-trace" class="game-tab" aria-selected="false">Trace</button>
-      </nav>
+      <div class="game-switcher-wrap">
+        <label class="game-switcher-label" for="game-switcher">Game</label>
+        <select id="game-switcher" class="game-switcher" aria-label="Choose a game">
+          <option value="mazes">Mazes</option>
+          <option value="dots">Dots</option>
+          <option value="trace">Trace</option>
+        </select>
+      </div>
 
       <div id="game-mazes" class="game-panel">
       <main class="main">

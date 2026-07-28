@@ -31,13 +31,15 @@ npx --yes serve .
 
 | Hash / param | Meaning |
 |--------------|---------|
-| `#mazes` | Maze game tab |
+| `#mazes` | Maze game |
 | `?size=8&seed=123` | Maze config (query string) |
 | `#dots?pic=cat&diff=medium` | Dots game with picture and difficulty |
 | `#dots?daily=1` | Daily connect-the-dots puzzle |
 | `#trace?glyph=A` | Trace letter A |
 | `#trace?kind=number&glyph=5` | Trace number 5 |
 | `#trace?daily=1` | Daily trace glyph |
+
+Games are chosen from the **Game** dropdown (built from a registry in `js/hub.js`). Adding another game = one registry entry + a panel in `index.html`.
 
 Maze example: `?size=8&seed=12345#mazes`  
 Dots example: `#dots?pic=cat&diff=easy&labels=letters`

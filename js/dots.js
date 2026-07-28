@@ -10,6 +10,7 @@ import {
   copyToClipboard,
   buildGameUrl,
   setGameHash,
+  parseGameHash,
   getStoredBest,
   saveStoredBest,
   mulberry32,
@@ -318,7 +319,12 @@ export class DotsApp {
     this.lib = await loadDotsLibrary();
     this._buildCategoryButtons();
     this._bindControls();
-    this._loadFromHash();
+    // Hub owns deep-link routing; prepare a default puzzle without touching the hash.
+    if (!this.picture) {
+      const seed = (Math.random() * 0xffffffff) >>> 0;
+      this.picture = pickRandomPicture(this.lib, this.category, seed);
+      this._setupPuzzle({ sync: false });
+    }
     window.addEventListener("resize", () => this._render());
   }
 
@@ -512,7 +518,7 @@ export class DotsApp {
     this._setupPuzzle();
   }
 
-  _setupPuzzle() {
+  _setupPuzzle({ sync = true } = {}) {
     this._stopCelebrate?.();
     this._stopCelebrate = null;
     this.timer.reset();
@@ -530,7 +536,7 @@ export class DotsApp {
     this._updateBestDisplay();
     this._updateDailyChip();
     this._render();
-    this._syncUrl();
+    if (sync) this._syncUrl();
     this._armInactivityHint();
   }
 
@@ -815,21 +821,26 @@ export class DotsApp {
     stage.appendChild(svg);
   }
 
-  _syncUrl() {
+  getShareParams() {
     if (!this.picture) return {};
-    const params = {
+    return {
       pic: this.picture.id,
       diff: this.difficulty,
       labels: this.labelType !== "numbers" ? this.labelType : undefined,
       daily: this.isDaily ? "1" : undefined,
     };
-    setGameHash("dots", params);
+  }
+
+  _syncUrl() {
+    const params = this.getShareParams();
+    const { game } = parseGameHash();
+    // Never clobber another game's deep link during bootstrap or background updates.
+    if (game === "dots") setGameHash("dots", params);
     return params;
   }
 
   getShareUrl() {
-    const p = this._syncUrl();
-    return buildGameUrl("dots", p);
+    return buildGameUrl("dots", this.getShareParams());
   }
 
   async _share() {
