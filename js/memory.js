@@ -314,6 +314,14 @@ export class MemoryApp {
       return;
     }
     const found = this.matched.size;
+    if (found === 0 && this.flipped.length === 0) {
+      this.els.status.textContent = `${this.deck.category.emoji} Tap a teal card to flip it!`;
+      return;
+    }
+    if (this.flipped.length === 1) {
+      this.els.status.textContent = "Nice! Tap one more card…";
+      return;
+    }
     this.els.status.textContent = `${this.deck.category.emoji} ${this.deck.category.name} — ${found} of ${this.deck.pairs} pairs`;
   }
 
@@ -328,34 +336,51 @@ export class MemoryApp {
     stage.style.setProperty("--memory-rows", String(this.deck.rows));
     stage.innerHTML = "";
     stage.setAttribute("role", "grid");
-    stage.setAttribute("aria-label", "Memory cards");
+    stage.setAttribute("aria-label", "Memory cards — tap to flip");
     stage.tabIndex = 0;
 
     this.deck.cards.forEach((card, index) => {
-      const isMatched = this.matched.has(card.pairId);
-      const isFlipped = isMatched || this.flipped.includes(index);
+      const faceKind = /[A-Z0-9]/.test(card.face) && card.face.length === 1 ? "glyph" : "emoji";
       const btn = document.createElement("button");
       btn.type = "button";
-      btn.className = `memory-card${isFlipped ? " is-flipped" : ""}${isMatched ? " is-matched" : ""}${
-        this.focusIndex === index ? " is-focus" : ""
-      }`;
+      btn.className = "memory-card";
       btn.dataset.index = String(index);
       btn.setAttribute("role", "gridcell");
-      const faceKind = /[A-Z0-9]/.test(card.face) && card.face.length === 1 ? "glyph" : "emoji";
-      btn.setAttribute(
-        "aria-label",
-        isFlipped
-          ? `Card ${index + 1} of ${this.deck.cards.length}, ${card.label}`
-          : `Card ${index + 1} of ${this.deck.cards.length}, face down`
-      );
       btn.innerHTML = `
         <span class="memory-card-inner">
           <span class="memory-card-face memory-card-back" aria-hidden="true">?</span>
           <span class="memory-card-face memory-card-front memory-card-front--${faceKind}" aria-hidden="true">${card.face}<span class="memory-check">✓</span></span>
         </span>
       `;
-      btn.addEventListener("click", () => this._flip(index));
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        this._flip(index);
+      });
       stage.appendChild(btn);
+    });
+    this._syncCardDom();
+  }
+
+  /** Update face-up / matched classes without rebuilding the grid (keeps flips visible). */
+  _syncCardDom() {
+    const stage = this.els.stage;
+    if (!stage || !this.deck) return;
+    stage.querySelectorAll(".memory-card").forEach((btn) => {
+      const index = Number(btn.dataset.index);
+      const card = this.deck.cards[index];
+      if (!card) return;
+      const isMatched = this.matched.has(card.pairId);
+      const isFlipped = isMatched || this.flipped.includes(index);
+      btn.classList.toggle("is-flipped", isFlipped);
+      btn.classList.toggle("is-matched", isMatched);
+      btn.classList.toggle("is-focus", this.focusIndex === index);
+      btn.disabled = isMatched || this.completed;
+      btn.setAttribute(
+        "aria-label",
+        isFlipped
+          ? `Card ${index + 1} of ${this.deck.cards.length}, ${card.label}`
+          : `Card ${index + 1} of ${this.deck.cards.length}, face down — tap to flip`
+      );
     });
   }
 
@@ -375,7 +400,7 @@ export class MemoryApp {
     } else return;
     e.preventDefault();
     this.focusIndex = next;
-    this._render();
+    this._syncCardDom();
     this.els.stage?.querySelector(`[data-index="${next}"]`)?.focus();
   }
 
@@ -392,7 +417,8 @@ export class MemoryApp {
     this.flipped.push(index);
     this.focusIndex = index;
     playPop();
-    this._render();
+    this._syncCardDom();
+    this._updateStatus();
 
     if (this.flipped.length < 2) return;
 
@@ -411,14 +437,15 @@ export class MemoryApp {
       this.flipped = [];
       this.lock = false;
       this._updateStatus();
-      this._render();
+      this._syncCardDom();
       if (this.matched.size >= this.deck.pairs) this._onComplete();
     } else {
       playBonk();
       this._mismatchTimer = setTimeout(() => {
         this.flipped = [];
         this.lock = false;
-        this._render();
+        this._syncCardDom();
+        this._updateStatus();
       }, MISMATCH_PAUSE_MS);
     }
   }
