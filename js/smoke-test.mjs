@@ -211,6 +211,11 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(PATH_TO_GAME.search === "search", "search maps to search");
 }
 
+// Home route stays home (maze must not own the URL on boot)
+{
+  assert(GAME_PATHS.home === "", "home has empty path segment");
+}
+
 // Dots sampling
 {
   const paths = [[[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]];

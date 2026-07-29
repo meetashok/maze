@@ -15,6 +15,12 @@
   box-shadow: var(--shadow);
   background: var(--floor);
   overflow: hidden;
+  /* Allow page scroll until the child starts a stroke */
+  touch-action: pan-y;
+  overscroll-behavior: contain;
+}
+
+.trace-stage.is-tracing {
   touch-action: none;
 }
 

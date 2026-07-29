@@ -76,11 +76,23 @@ export function playWinSound() {
 
 export function bindSoundToggle(btn) {
   if (!btn) return;
+  // Resume audio on first gesture so default-ON sounds actually play.
+  const unlock = () => {
+    try {
+      const ctx = getCtx();
+      if (ctx?.state === "suspended") ctx.resume();
+    } catch {
+      /* ignore */
+    }
+    document.removeEventListener("pointerdown", unlock);
+  };
+  document.addEventListener("pointerdown", unlock, { once: true });
+
   const sync = () => {
     const on = isSoundOn();
     btn.setAttribute("aria-pressed", on ? "true" : "false");
     btn.textContent = on ? "🔊" : "🔇";
-    btn.title = on ? "Sound on" : "Sound muted";
+    btn.title = on ? "Sound on — tap to mute" : "Sound muted — tap to unmute";
     btn.setAttribute("aria-label", on ? "Mute sound" : "Unmute sound");
   };
   sync();

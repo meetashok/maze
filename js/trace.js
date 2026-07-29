@@ -559,6 +559,13 @@ export class TraceApp {
   }
 
   _bindStagePointer(svg) {
+    const stage = this.els.stage;
+    const endTraceMode = () => {
+      this.drawing = false;
+      this._pointerId = null;
+      stage?.classList.remove("is-tracing");
+    };
+
     const onDown = (e) => {
       if (this.completed || !this.item) return;
       if (e.button != null && e.button !== 0) return;
@@ -567,15 +574,15 @@ export class TraceApp {
       const stroke = this.item.paths[this.strokeIndex];
       if (!stroke?.length) return;
       const near = nearestOnPath(stroke, pt);
+      // Missed the start dot — don't capture the pointer so the page can scroll.
       if (near.dist > TRACE_THRESHOLD * 1.4 || near.progress > 0.25) {
-        this._toast("Start at the glowing green dot");
-        playBonk();
         return;
       }
       this.drawing = true;
       this._pointerId = e.pointerId;
       this.maxProgress = near.progress;
       this.ink = [pt];
+      stage?.classList.add("is-tracing");
       playPop();
       try {
         svg.setPointerCapture(e.pointerId);
@@ -592,7 +599,7 @@ export class TraceApp {
       const stroke = this.item.paths[this.strokeIndex];
       const near = nearestOnPath(stroke, pt);
       if (near.dist > TRACE_THRESHOLD * 1.6) {
-        this.drawing = false;
+        endTraceMode();
         this.ink = [];
         this._render();
         this._toast("Stay on the dashed line");
@@ -607,14 +614,14 @@ export class TraceApp {
 
     const onUp = (e) => {
       if (!this.drawing || e.pointerId !== this._pointerId) return;
-      this.drawing = false;
-      this._pointerId = null;
-      if (this.maxProgress >= STROKE_COMPLETE) {
+      const finishedStroke = this.maxProgress >= STROKE_COMPLETE;
+      if (finishedStroke) {
         this.inkStrokes.push([...this.ink]);
         this.ink = [];
         this.maxProgress = 0;
         this.strokeIndex += 1;
         playPop();
+        endTraceMode();
         if (this.strokeIndex >= this.item.paths.length) {
           this._complete();
         } else {
@@ -624,6 +631,7 @@ export class TraceApp {
       } else {
         this.ink = [];
         this.maxProgress = 0;
+        endTraceMode();
         this._render();
         this._toast("Keep going along the line");
         playBonk();

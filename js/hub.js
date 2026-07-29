@@ -62,7 +62,7 @@ export const GAMES = {
     tagline: "Flip cards — find the pairs",
     description: "A card-matching memory game for little kids — tap to flip, find the pairs.",
     howto: "Flip two cards. If they match, they stay up. Find every pair!",
-    cardBlurb: "Flip cards and find pairs!",
+    cardBlurb: "Match pairs to train your memory!",
   },
   search: {
     title: "Word Search",
@@ -71,7 +71,7 @@ export const GAMES = {
     tagline: "Find the hidden words",
     description: "Kid-friendly word search puzzles — play online or print worksheets.",
     howto: "Drag across letters to find each word in the list.",
-    cardBlurb: "Find the hidden words!",
+    cardBlurb: "Find hidden words in the grid!",
   },
 };
 

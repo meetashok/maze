@@ -647,16 +647,33 @@ export class DotsApp {
 
   _updateStatus() {
     if (!this.els.status) return;
-    if (this.completed) {
-      this.els.status.textContent = `${this.picture?.name || "Picture"} revealed!`;
-      return;
-    }
     const cat = this.lib?.categories?.find((c) => c.id === this.category);
     const emoji = cat?.emoji || "🔵";
-    const name = this.picture?.name || "Picture";
+    const name = this.picture?.name || "picture";
     const n = this.puzzle?.points?.length || 0;
-    const next = this.connected + 1;
-    this.els.status.textContent = `${emoji} ${name} — ${n} dots · tap ${next}`;
+    const left = Math.max(0, n - this.connected);
+
+    if (this.completed) {
+      this.els.status.textContent = `${emoji} You found the ${name}!`;
+      return;
+    }
+    if (this.connected === 0) {
+      this.els.status.textContent = `${emoji} Can you find the ${name}? Tap dot 1 to start!`;
+      return;
+    }
+    if (left <= 3) {
+      this.els.status.textContent = `Almost there! Just ${left} more!`;
+      return;
+    }
+    if (this.connected <= 3) {
+      this.els.status.textContent = `Great start! ${left} dots to go!`;
+      return;
+    }
+    if (this.connected >= Math.floor(n / 2)) {
+      this.els.status.textContent = `You're doing awesome! Keep going! (${left} left)`;
+      return;
+    }
+    this.els.status.textContent = `Keep going! ${left} more dots!`;
   }
 
   _shakeDot(index) {

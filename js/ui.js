@@ -26,6 +26,7 @@ import {
   formatTime,
   deriveSeed,
 } from "./utils.js";
+import { parseGameRoute } from "./common.js";
 
 const ICON_OPTIONS = [
   "🐸", "🐛", "🐱", "🐶", "🐰", "🦊", "🐻", "🐼",
@@ -318,24 +319,32 @@ export class MazeApp {
   }
 
   _loadFromUrlOrDefault() {
+    const { game } = parseGameRoute();
+    const onMazes = game === "mazes";
     const p = parseUrlParams();
-    if (p.daily) {
+    if (onMazes && p.daily) {
       this.isDaily = true;
       this.size = DAILY_SIZE;
       this.detour = DAILY_DETOUR;
       this.seed = dailySeed();
-    } else {
+    } else if (onMazes) {
       this.size = p.size ?? 8;
       this.detour = p.detour ?? 1;
       this.seed = p.seed ?? randomSeed();
       this.isDaily = false;
+    } else {
+      // Don't steal the URL when another game (or home) is active.
+      this.size = 8;
+      this.detour = 1;
+      this.seed = randomSeed();
+      this.isDaily = false;
     }
-    this.startIcon = p.start || DEFAULT_START;
-    this.endIcon = p.end || DEFAULT_END;
+    this.startIcon = (onMazes && p.start) || DEFAULT_START;
+    this.endIcon = (onMazes && p.end) || DEFAULT_END;
     this.els.sizeRange.value = String(this.size);
     this._updateSizeLabel();
     this._syncDetourButtons();
-    this._loadMaze(true);
+    this._loadMaze(onMazes);
   }
 
   _loadMaze(updateUrl) {
@@ -510,6 +519,9 @@ export class MazeApp {
   }
 
   _syncUrl() {
+    // Never clobber home or another game's deep link.
+    const { game } = parseGameRoute();
+    if (game !== "mazes") return;
     const url = buildShareUrl({
       size: this.size,
       seed: this.seed,
