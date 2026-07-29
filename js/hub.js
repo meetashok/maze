@@ -115,23 +115,43 @@ class GameHub {
     setGameRoute(bootRoute.game, Object.fromEntries(bootRoute.params.entries()), true);
     bootRoute = parseGameRoute();
 
-    this.mazeApp = new MazeApp();
-    this.mazeApp.init();
-
-    this.dotsApp = new DotsApp();
-    await this.dotsApp.init();
-
-    this.traceApp = new TraceApp();
-    await this.traceApp.init();
-
-    this.memoryApp = new MemoryApp();
-    await this.memoryApp.init();
-
-    this.searchApp = new SearchApp();
-    await this.searchApp.init();
-
+    // Show nav/landing immediately; load games without blocking the shell.
     this._bindNav();
     this._applyRoute(bootRoute, true);
+
+    try {
+      this.mazeApp = new MazeApp();
+      this.mazeApp.init();
+    } catch (err) {
+      console.error("Maze init failed", err);
+    }
+    try {
+      this.dotsApp = new DotsApp();
+      await this.dotsApp.init();
+    } catch (err) {
+      console.error("Dots init failed", err);
+    }
+    try {
+      this.traceApp = new TraceApp();
+      await this.traceApp.init();
+    } catch (err) {
+      console.error("Trace init failed", err);
+    }
+    try {
+      this.memoryApp = new MemoryApp();
+      await this.memoryApp.init();
+    } catch (err) {
+      console.error("Memory init failed", err);
+    }
+    try {
+      this.searchApp = new SearchApp();
+      await this.searchApp.init();
+    } catch (err) {
+      console.error("Search init failed", err);
+    }
+
+    // Re-apply so deep links hydrate after apps are ready.
+    this._applyRoute(parseGameRoute(), true);
     window.addEventListener("popstate", () => this._applyRoute(parseGameRoute(), false));
   }
 
