@@ -315,7 +315,7 @@ export class MemoryApp {
     }
     const found = this.matched.size;
     if (found === 0 && this.flipped.length === 0) {
-      this.els.status.textContent = `${this.deck.category.emoji} Tap a teal card to flip it!`;
+      this.els.status.textContent = `🐾 Tap a green card to flip it!`;
       return;
     }
     if (this.flipped.length === 1) {
@@ -347,12 +347,12 @@ export class MemoryApp {
       btn.dataset.index = String(index);
       btn.setAttribute("role", "gridcell");
       btn.innerHTML = `
-        <span class="memory-card-inner">
-          <span class="memory-card-face memory-card-back" aria-hidden="true">?</span>
-          <span class="memory-card-face memory-card-front memory-card-front--${faceKind}" aria-hidden="true">${card.face}<span class="memory-check">✓</span></span>
-        </span>
+        <span class="memory-card-back" aria-hidden="true">?<span class="memory-card-hint">Tap</span></span>
+        <span class="memory-card-front memory-card-front--${faceKind}" aria-hidden="true">${card.face}<span class="memory-check">✓</span></span>
       `;
-      btn.addEventListener("click", (e) => {
+      // pointerup fires reliably on iPad; ignore non-primary mouse buttons
+      btn.addEventListener("pointerup", (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return;
         e.preventDefault();
         this._flip(index);
       });

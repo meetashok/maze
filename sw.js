@@ -1,5 +1,5 @@
-/* Puzzle Play service worker — network-first so new games show up after deploys. */
-const CACHE = "puzzle-play-v7";
+/* Puzzle Play service worker — network-first so deploys aren't stuck behind cache. */
+const CACHE = "puzzle-play-v8";
 const ASSETS = [
   "./",
   "./index.html",
@@ -59,13 +59,17 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Network-first for HTML/JS/JSON so hub updates (new games) aren't stuck behind cache.
+  // Network-first for almost everything — CSS used to be cache-first and left
+  // Memory Match stuck on broken card styles after deploys.
   const networkFirst =
     req.mode === "navigate" ||
     url.pathname.endsWith(".html") ||
+    url.pathname.endsWith(".css") ||
     url.pathname.endsWith(".js") ||
     url.pathname.endsWith(".json") ||
-    url.pathname.endsWith("/");
+    url.pathname.endsWith(".svg") ||
+    url.pathname.endsWith("/") ||
+    /\/sw\.js$/.test(url.pathname);
 
   if (networkFirst) {
     event.respondWith(

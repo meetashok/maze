@@ -45,7 +45,7 @@
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/dots.css" />
     <link rel="stylesheet" href="css/trace.css" />
-    <link rel="stylesheet" href="css/memory.css" />
+    <link rel="stylesheet" href="css/memory.css?v=8" />
     <link rel="stylesheet" href="css/search.css" />
     <script>
       (function () {
@@ -406,7 +406,7 @@
           </section>
 
           <section class="memory-panel" aria-label="Memory match">
-            <p id="memory-status" class="memory-status">Tap a teal card to flip it!</p>
+            <p id="memory-status" class="memory-status">Tap a green card to flip it!</p>
             <div class="memory-stats" aria-live="polite">
               <span id="memory-flips">Flips: 0</span>
               <span id="memory-timer-display" class="timer-display">0:00.0</span>
@@ -444,6 +444,17 @@
               </label>
             </div>
           </section>
+
+          <details class="parent-tips">
+            <summary>For parents — how to help</summary>
+            <div class="parent-tips-body">
+              <p>Start with Easy (2×2 — just 4 cards). Perfect for ages 2–3.</p>
+              <p>Animals and Colors themes work best for little ones who can’t read yet.</p>
+              <p>Let them take their time — memory improves with repetition, not speed.</p>
+              <p>The star rating is always encouraging — everyone gets at least one star.</p>
+              <p>Daily Match is a nice 2-minute morning routine.</p>
+            </div>
+          </details>
         </main>
       </div>
 
@@ -745,7 +756,9 @@
     <script>
       if ("serviceWorker" in navigator) {
         window.addEventListener("load", function () {
-          navigator.serviceWorker.register("sw.js").catch(function () {});
+          navigator.serviceWorker.register("sw.js").then(function (reg) {
+            reg.update();
+          }).catch(function () {});
         });
       }
     </script>
