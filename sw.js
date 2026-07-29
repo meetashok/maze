@@ -1,5 +1,5 @@
 /* Puzzle Play service worker — network-first so new games show up after deploys. */
-const CACHE = "puzzle-play-v4";
+const CACHE = "puzzle-play-v6";
 const ASSETS = [
   "./",
   "./index.html",
@@ -27,6 +27,11 @@ const ASSETS = [
   "./js/search.js",
   "./js/search-words.json",
   "./manifest.json",
+  "./assets/favicon.svg",
+  "./assets/logo-mark.svg",
+  "./assets/apple-touch-icon.png",
+  "./assets/icon-192.png",
+  "./assets/icon-512.png",
 ];
 
 self.addEventListener("install", (event) => {

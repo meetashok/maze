@@ -8,6 +8,12 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="assets/favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
+    <meta property="og:title" content="Puzzle Play" />
+    <meta property="og:description" content="Kid-friendly puzzle games — mazes, connect the dots, tracing, memory, and word search!" />
+    <meta property="og:image" content="assets/icon-512.png" />
     <title>Puzzle Play — Mazes, Dots & More</title>
     <script>
       /* Set <base> before CSS/JS so /connect and /trace still load assets. */
@@ -54,7 +60,10 @@
     <div class="app">
       <header class="top-bar">
         <div class="brand-block">
-          <p id="hub-brand" class="brand">Puzzle Play</p>
+          <div class="brand-row">
+            <img class="brand-mark" src="assets/logo-mark.svg" width="44" height="44" alt="" />
+            <p id="hub-brand" class="brand">Puzzle Play</p>
+          </div>
           <p id="hub-tagline" class="tagline">Pick a game and play!</p>
         </div>
         <div class="top-bar-actions">
@@ -81,7 +90,10 @@
       <!-- Landing -->
       <div id="game-home" class="game-panel landing-panel">
         <section class="landing" aria-label="Choose a game">
-          <h1 class="landing-title">Puzzle Play</h1>
+          <div class="landing-brand">
+            <img class="landing-mark" src="assets/logo-mark.svg" width="72" height="72" alt="" />
+            <h1 class="landing-title">Puzzle Play</h1>
+          </div>
           <p class="landing-lead">Fun puzzles for little fingers.</p>
           <div id="landing-cards" class="landing-cards"></div>
         </section>
