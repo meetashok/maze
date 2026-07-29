@@ -1,4 +1,4 @@
-/* Memory Match — one face per card, always centered in the button */
+/* Memory Match — face-down hides the answer; face-up emoji fills the tile */
 
 .memory-panel {
   position: relative;
@@ -31,6 +31,7 @@
 
 .memory-card {
   position: relative;
+  container-type: size;
   box-sizing: border-box;
   display: block;
   aspect-ratio: 1 / 1;
@@ -69,7 +70,6 @@
     0 4px 10px rgba(20, 102, 93, 0.22);
 }
 
-/* Single content layer — fills the button, centered */
 .memory-face {
   position: absolute;
   inset: 0;
@@ -83,43 +83,53 @@
   box-sizing: border-box;
   pointer-events: none;
   line-height: 1;
+}
+
+/* Face-down: big ? only — never the pair picture */
+.memory-face--back {
   font-family: var(--font-display);
-  font-weight: 800;
-  font-size: clamp(1.8rem, 7vw, 2.4rem);
   color: #ffffff;
   text-shadow: 0 2px 0 rgba(0, 0, 0, 0.2);
 }
 
-.memory-face--back {
+.memory-card-q {
+  font-size: clamp(2rem, 55cqmin, 3rem);
+  font-weight: 800;
+  line-height: 1;
   color: #ffffff;
 }
 
 .memory-card-hint {
   display: block;
   font-family: var(--font-body);
-  font-size: clamp(0.62rem, 2.4vw, 0.78rem);
+  font-size: clamp(0.65rem, 14cqmin, 0.85rem);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: #ffe8a3;
-  text-shadow: none;
   line-height: 1;
 }
 
-.memory-face--emoji,
-.memory-face--glyph {
-  color: var(--ink);
+/* Face-up: emoji/glyph fills most of the tile (Fredoka shrinks emoji — use emoji fonts) */
+.memory-face--emoji {
+  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", "Twemoji Mozilla",
+    sans-serif;
+  font-weight: 400;
+  font-size: clamp(2.75rem, 72cqmin, 5rem);
+  line-height: 1;
+  color: #243037;
   text-shadow: none;
-  font-size: clamp(2rem, 8vw, 3rem);
 }
 
 .memory-face--glyph {
   font-family: var(--font-display);
-  font-size: clamp(1.7rem, 6.5vw, 2.7rem);
+  font-weight: 800;
+  font-size: clamp(2.5rem, 68cqmin, 4.5rem);
+  line-height: 1;
   color: var(--teal-deep);
+  text-shadow: none;
 }
 
-/* Face up */
 .memory-card.is-flipped {
   background-color: #ffffff;
   background-image: none;
@@ -144,6 +154,7 @@
   top: 4px;
   right: 7px;
   z-index: 2;
+  font-family: var(--font-display);
   font-size: 0.85rem;
   font-weight: 800;
   color: #2f9e44;
@@ -237,6 +248,22 @@
   .memory-card {
     min-width: 72px;
     min-height: 72px;
+  }
+}
+
+/* Fallback when container queries aren't available */
+@supports not (font-size: 1cqmin) {
+  .memory-card-q {
+    font-size: clamp(2rem, 12vw, 3rem);
+  }
+
+  .memory-face--emoji {
+    font-size: clamp(2.75rem, 18vw, 5rem);
+    color: inherit;
+  }
+
+  .memory-face--glyph {
+    font-size: clamp(2.5rem, 16vw, 4.5rem);
   }
 }
 

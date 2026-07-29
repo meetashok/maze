@@ -344,11 +344,9 @@ export class MemoryApp {
       btn.type = "button";
       btn.className = "memory-card";
       btn.dataset.index = String(index);
-      btn.dataset.face = card.face;
-      btn.dataset.label = card.label;
       btn.setAttribute("role", "gridcell");
-      // One face slot only — avoids stacked layers painting in the wrong place on iOS
-      btn.innerHTML = `<span class="memory-face" aria-hidden="true"></span>`;
+      // Face content is filled only by _syncCardDom — never put the answer on the button
+      btn.innerHTML = `<span class="memory-face memory-face--back" aria-hidden="true"></span>`;
       btn.addEventListener("pointerup", (e) => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
         e.preventDefault();
@@ -370,7 +368,7 @@ export class MemoryApp {
       const isMatched = this.matched.has(card.pairId);
       const isFlipped = isMatched || this.flipped.includes(index);
       const faceEl = btn.querySelector(".memory-face");
-      const faceKind = /[A-Z0-9]/.test(card.face) && card.face.length === 1 ? "glyph" : "emoji";
+      const isGlyph = Array.from(card.face).length === 1 && /[A-Za-z0-9]/.test(card.face);
 
       btn.classList.toggle("is-flipped", isFlipped);
       btn.classList.toggle("is-matched", isMatched);
@@ -378,11 +376,20 @@ export class MemoryApp {
       btn.disabled = isMatched || this.completed;
 
       if (faceEl) {
-        faceEl.className = `memory-face memory-face--${isFlipped ? faceKind : "back"}`;
         if (isFlipped) {
+          faceEl.className = `memory-face memory-face--${isGlyph ? "glyph" : "emoji"}`;
           faceEl.textContent = card.face;
         } else {
-          faceEl.innerHTML = `?<span class="memory-card-hint">Tap</span>`;
+          // Face-down: only ? + Tap — answer emoji must not exist in the DOM
+          faceEl.className = "memory-face memory-face--back";
+          faceEl.replaceChildren();
+          const q = document.createElement("span");
+          q.className = "memory-card-q";
+          q.textContent = "?";
+          const hint = document.createElement("span");
+          hint.className = "memory-card-hint";
+          hint.textContent = "Tap";
+          faceEl.append(q, hint);
         }
       }
 
