@@ -340,17 +340,15 @@ export class MemoryApp {
     stage.tabIndex = 0;
 
     this.deck.cards.forEach((card, index) => {
-      const faceKind = /[A-Z0-9]/.test(card.face) && card.face.length === 1 ? "glyph" : "emoji";
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "memory-card";
       btn.dataset.index = String(index);
+      btn.dataset.face = card.face;
+      btn.dataset.label = card.label;
       btn.setAttribute("role", "gridcell");
-      btn.innerHTML = `
-        <span class="memory-card-back" aria-hidden="true">?<span class="memory-card-hint">Tap</span></span>
-        <span class="memory-card-front memory-card-front--${faceKind}" aria-hidden="true">${card.face}<span class="memory-check">✓</span></span>
-      `;
-      // pointerup fires reliably on iPad; ignore non-primary mouse buttons
+      // One face slot only — avoids stacked layers painting in the wrong place on iOS
+      btn.innerHTML = `<span class="memory-face" aria-hidden="true"></span>`;
       btn.addEventListener("pointerup", (e) => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
         e.preventDefault();
@@ -371,10 +369,23 @@ export class MemoryApp {
       if (!card) return;
       const isMatched = this.matched.has(card.pairId);
       const isFlipped = isMatched || this.flipped.includes(index);
+      const faceEl = btn.querySelector(".memory-face");
+      const faceKind = /[A-Z0-9]/.test(card.face) && card.face.length === 1 ? "glyph" : "emoji";
+
       btn.classList.toggle("is-flipped", isFlipped);
       btn.classList.toggle("is-matched", isMatched);
       btn.classList.toggle("is-focus", this.focusIndex === index);
       btn.disabled = isMatched || this.completed;
+
+      if (faceEl) {
+        faceEl.className = `memory-face memory-face--${isFlipped ? faceKind : "back"}`;
+        if (isFlipped) {
+          faceEl.textContent = card.face;
+        } else {
+          faceEl.innerHTML = `?<span class="memory-card-hint">Tap</span>`;
+        }
+      }
+
       btn.setAttribute(
         "aria-label",
         isFlipped
