@@ -894,7 +894,7 @@ a {
 
 .detour-buttons {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
   gap: 6px;
 }
 
@@ -906,7 +906,7 @@ a {
   background: var(--btn-ghost-bg);
   color: var(--ink);
   font-family: var(--font-body);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-weight: 800;
   line-height: 1.15;
   cursor: pointer;

@@ -9,6 +9,9 @@ export const E = 2;
 export const S = 4;
 export const W = 8;
 
+/** Max style index: 0 Simple … 4 Confusing paths */
+export const MAX_DETOUR = 4;
+
 const DIRS = [
   { bit: N, opp: S, dr: -1, dc: 0 },
   { bit: E, opp: W, dr: 0, dc: 1 },
@@ -16,8 +19,16 @@ const DIRS = [
   { bit: W, opp: E, dr: 0, dc: -1 },
 ];
 
-const MAX_QUALITY_ATTEMPTS = 16;
-const BRAID_PROB = 0.1;
+const MAX_QUALITY_ATTEMPTS = 24;
+/** Braid dead-end walls → loops. Higher = less wall-followable. */
+const BRAID_DEAD_END = {
+  3: 0.28,
+  4: 0.42,
+};
+/** Extra mid-corridor loops for Confusing paths. */
+const BRAID_PASSAGE = {
+  4: 0.12,
+};
 
 function shuffle(arr, rand) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -43,16 +54,79 @@ function openCount(cells, r, c) {
   return 4 - ((w & N ? 1 : 0) + (w & E ? 1 : 0) + (w & S ? 1 : 0) + (w & W ? 1 : 0));
 }
 
-function finishMaze(cells, n, seed, detour) {
-  cells[0][0] &= ~N;
-  cells[n - 1][n - 1] &= ~S;
+function cellKey(n, r, c) {
+  return r * n + c;
+}
+
+/** Open the outer wall(s) at an edge/corner cell so start/end read clearly. */
+function openExterior(cells, n, cell) {
+  if (cell.r === 0) cells[cell.r][cell.c] &= ~N;
+  if (cell.r === n - 1) cells[cell.r][cell.c] &= ~S;
+  if (cell.c === 0) cells[cell.r][cell.c] &= ~W;
+  if (cell.c === n - 1) cells[cell.r][cell.c] &= ~E;
+}
+
+function edgeCells(n) {
+  const edges = [];
+  for (let i = 0; i < n; i++) {
+    edges.push({ r: 0, c: i });
+    edges.push({ r: n - 1, c: i });
+    if (i > 0 && i < n - 1) {
+      edges.push({ r: i, c: 0 });
+      edges.push({ r: i, c: n - 1 });
+    }
+  }
+  return edges;
+}
+
+/**
+ * Classic corners for easier styles; varied far-apart edge points for harder styles
+ * so kids can't always aim "toward the bottom-right."
+ */
+function pickStartEnd(n, rand, detour) {
+  if (detour < 3) {
+    return { start: { r: 0, c: 0 }, end: { r: n - 1, c: n - 1 } };
+  }
+  const edges = edgeCells(n);
+  shuffle(edges, rand);
+  const start = edges[0];
+  const minDist = Math.max(3, Math.floor(n * 0.75));
+  let end = null;
+  let best = -1;
+  for (let i = 1; i < edges.length; i++) {
+    const cand = edges[i];
+    if (cand.r === start.r && cand.c === start.c) continue;
+    const dist = Math.abs(cand.r - start.r) + Math.abs(cand.c - start.c);
+    if (dist < minDist) continue;
+    if (dist > best) {
+      best = dist;
+      end = cand;
+    }
+  }
+  if (!end) {
+    for (let i = 1; i < edges.length; i++) {
+      const cand = edges[i];
+      if (cand.r === start.r && cand.c === start.c) continue;
+      const dist = Math.abs(cand.r - start.r) + Math.abs(cand.c - start.c);
+      if (dist > best) {
+        best = dist;
+        end = cand;
+      }
+    }
+  }
+  return { start, end: end || { r: n - 1, c: n - 1 } };
+}
+
+function finishMaze(cells, n, seed, detour, start, end) {
+  openExterior(cells, n, start);
+  openExterior(cells, n, end);
   return {
     size: n,
     seed,
     detour,
     cells,
-    start: { r: 0, c: 0 },
-    end: { r: n - 1, c: n - 1 },
+    start: { r: start.r, c: start.c },
+    end: { r: end.r, c: end.c },
   };
 }
 
@@ -72,27 +146,110 @@ export function analyzeMaze(maze) {
   return { junctions, deadEnds };
 }
 
+/**
+ * Measure false-path (spur) lengths off the shortest solution.
+ * Longer spurs = more convincing wrong turns.
+ */
+export function analyzeSpurs(maze) {
+  const solution = solveBFS(maze);
+  if (solution.length < 2) {
+    return { longSpurs: 0, maxSpur: 0, avgSpur: 0, spurCount: 0 };
+  }
+  const n = maze.size;
+  const onSol = new Set(solution.map((p) => cellKey(n, p.r, p.c)));
+  const seenRoot = new Set();
+  let longSpurs = 0;
+  let maxSpur = 0;
+  let sum = 0;
+  let spurCount = 0;
+  const longThresh = Math.max(3, Math.floor(n * 0.4));
+
+  for (const p of solution) {
+    for (const nb of openNeighbors(maze.cells, p.r, p.c)) {
+      const nk = cellKey(n, nb.r, nb.c);
+      if (onSol.has(nk) || seenRoot.has(nk)) continue;
+      seenRoot.add(nk);
+      const len = measureSpurLength(maze, nb, onSol);
+      maxSpur = Math.max(maxSpur, len);
+      sum += len;
+      spurCount++;
+      if (len >= longThresh) longSpurs++;
+    }
+  }
+  return {
+    longSpurs,
+    maxSpur,
+    avgSpur: spurCount ? sum / spurCount : 0,
+    spurCount,
+  };
+}
+
+/** Farthest distance into a false branch before hitting the solution again. */
+function measureSpurLength(maze, entry, onSol) {
+  const n = maze.size;
+  const key = (r, c) => cellKey(n, r, c);
+  const queue = [{ r: entry.r, c: entry.c, d: 1 }];
+  const seen = new Set([key(entry.r, entry.c)]);
+  let maxD = 1;
+  while (queue.length) {
+    const cur = queue.shift();
+    maxD = Math.max(maxD, cur.d);
+    for (const nb of openNeighbors(maze.cells, cur.r, cur.c)) {
+      const k = key(nb.r, nb.c);
+      if (seen.has(k) || onSol.has(k)) continue;
+      seen.add(k);
+      queue.push({ r: nb.r, c: nb.c, d: cur.d + 1 });
+    }
+  }
+  return maxD;
+}
+
 function minStats(n, detour) {
+  if (detour >= 4) {
+    return {
+      junctions: Math.max(5, Math.floor(n * 0.75)),
+      deadEnds: Math.max(3, Math.floor(n * 0.55)),
+      longSpurs: Math.max(2, Math.floor(n * 0.25)),
+      maxSpur: Math.max(4, Math.floor(n * 0.5)),
+      minSolution: Math.max(n * 2, Math.floor(n * n * 0.22)),
+    };
+  }
   if (detour >= 3) {
     return {
-      junctions: Math.max(4, Math.floor(n * 0.55)),
-      deadEnds: Math.max(6, Math.floor(n * 1.1)),
+      junctions: Math.max(4, Math.floor(n * 0.6)),
+      deadEnds: Math.max(5, Math.floor(n * 0.85)),
+      longSpurs: Math.max(1, Math.floor(n * 0.2)),
+      maxSpur: Math.max(3, Math.floor(n * 0.4)),
+      minSolution: 0,
     };
   }
   if (detour >= 2) {
     return {
-      junctions: Math.max(3, Math.floor(n * 0.4)),
-      deadEnds: Math.max(4, Math.floor(n * 0.75)),
+      junctions: Math.max(3, Math.floor(n * 0.45)),
+      deadEnds: Math.max(4, Math.floor(n * 0.8)),
+      longSpurs: 0,
+      maxSpur: 0,
+      minSolution: 0,
     };
   }
-  return { junctions: 0, deadEnds: 0 };
+  return { junctions: 0, deadEnds: 0, longSpurs: 0, maxSpur: 0, minSolution: 0 };
 }
 
 function passesQuality(maze, detour) {
   const mins = minStats(maze.size, detour);
   if (!mins.junctions && !mins.deadEnds) return true;
   const { junctions, deadEnds } = analyzeMaze(maze);
-  return junctions >= mins.junctions && deadEnds >= mins.deadEnds;
+  if (junctions < mins.junctions || deadEnds < mins.deadEnds) return false;
+  if (mins.longSpurs || mins.maxSpur || mins.minSolution) {
+    const spurs = analyzeSpurs(maze);
+    if (spurs.longSpurs < mins.longSpurs) return false;
+    if (spurs.maxSpur < mins.maxSpur) return false;
+    if (mins.minSolution) {
+      const solLen = solveBFS(maze).length;
+      if (solLen < mins.minSolution) return false;
+    }
+  }
+  return true;
 }
 
 function carveDFS(n, rand) {
@@ -220,8 +377,9 @@ function carveKruskal(n, rand) {
   return cells;
 }
 
-/** Light braiding: remove some dead-end walls to add loops (expert only). */
-function braidMaze(cells, n, rand, prob = BRAID_PROB) {
+/** Remove some dead-end walls to add loops (breaks pure wall-following). */
+function braidDeadEnds(cells, n, rand, prob) {
+  if (!(prob > 0)) return;
   const dead = [];
   for (let r = 0; r < n; r++) {
     for (let c = 0; c < n; c++) {
@@ -244,39 +402,79 @@ function braidMaze(cells, n, rand, prob = BRAID_PROB) {
   }
 }
 
+/**
+ * Light mid-corridor loops: open a wall from some degree-2 cells.
+ * Adds ambiguous junctions without fully opening the maze.
+ */
+function braidPassages(cells, n, rand, prob) {
+  if (!(prob > 0)) return;
+  const candidates = [];
+  for (let r = 0; r < n; r++) {
+    for (let c = 0; c < n; c++) {
+      if (openCount(cells, r, c) === 2) candidates.push({ r, c });
+    }
+  }
+  shuffle(candidates, rand);
+  for (const cell of candidates) {
+    if (rand() >= prob) continue;
+    if (openCount(cells, cell.r, cell.c) !== 2) continue;
+    const options = DIRS.filter((d) => {
+      const nr = cell.r + d.dr;
+      const nc = cell.c + d.dc;
+      if (nr < 0 || nc < 0 || nr >= n || nc >= n) return false;
+      return (cells[cell.r][cell.c] & d.bit) !== 0;
+    });
+    if (!options.length) continue;
+    const d = options[Math.floor(rand() * options.length)];
+    removeWall(cells, cell.r, cell.c, d);
+  }
+}
+
 function buildCells(n, seed, detour) {
   const rand = mulberry32(seed);
   if (detour <= 0) return carveDFS(n, rand);
   if (detour === 1) return carveWilson(n, rand);
   const cells = carveKruskal(n, rand);
-  if (detour >= 3) braidMaze(cells, n, rand, BRAID_PROB);
+  if (detour >= 3) braidDeadEnds(cells, n, rand, BRAID_DEAD_END[detour] ?? 0.28);
+  if (detour >= 4) braidPassages(cells, n, rand, BRAID_PASSAGE[4]);
   return cells;
 }
 
 /**
  * @param {number} size grid dimension 4–20
  * @param {number} seed PRNG seed
- * @param {number} [detour=1] 0 Simple, 1 Branchy, 2 Tricky, 3 Expert
+ * @param {number} [detour=1] 0 Simple … 4 Confusing paths
  */
 export function generateMaze(size, seed, detour = 1) {
   const n = Math.max(4, Math.min(20, size | 0));
   const s = (seed >>> 0) || 1;
-  const d = Math.max(0, Math.min(3, detour | 0));
+  const d = Math.max(0, Math.min(MAX_DETOUR, detour | 0));
 
   if (d < 2) {
     const cells = buildCells(n, s, d);
-    return finishMaze(cells, n, s, d);
+    const { start, end } = pickStartEnd(n, mulberry32(s ^ 0x9e3779b9), d);
+    return finishMaze(cells, n, s, d, start, end);
   }
 
+  let best = null;
+  let bestScore = -1;
   for (let attempt = 0; attempt < MAX_QUALITY_ATTEMPTS; attempt++) {
     const trySeed = (s + attempt) >>> 0;
     const cells = buildCells(n, trySeed, d);
-    const maze = finishMaze(cells, n, s, d);
+    const { start, end } = pickStartEnd(n, mulberry32(trySeed ^ 0x85ebca6b), d);
+    const maze = finishMaze(cells, n, s, d, start, end);
     if (passesQuality(maze, d)) return maze;
+    // Keep the richest attempt if quality gates never fully pass
+    const stats = analyzeMaze(maze);
+    const spurs = analyzeSpurs(maze);
+    const score = stats.junctions * 3 + stats.deadEnds + spurs.longSpurs * 4 + spurs.maxSpur;
+    if (score > bestScore) {
+      bestScore = score;
+      best = maze;
+    }
   }
 
-  const cells = buildCells(n, s, d);
-  return finishMaze(cells, n, s, d);
+  return best || finishMaze(buildCells(n, s, d), n, s, d, { r: 0, c: 0 }, { r: n - 1, c: n - 1 });
 }
 
 export function canMove(cells, r, c, nr, nc) {

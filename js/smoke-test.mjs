@@ -4,7 +4,7 @@
  * (or: node js/smoke-test.mjs with import assertions)
  */
 
-import { generateMaze, solveBFS, canMove, getHintSteps, analyzeMaze } from "./maze.js";
+import { generateMaze, solveBFS, canMove, getHintSteps, analyzeMaze, analyzeSpurs } from "./maze.js";
 import {
   mulberry32,
   hashString,
@@ -73,32 +73,36 @@ function assert(cond, msg) {
 {
   for (const size of [4, 8, 15, 20]) {
     for (const seed of [1, 999, 123456]) {
-      const maze = generateMaze(size, seed);
-      const path = solveBFS(maze);
-      assert(path.length > 0, `solvable ${size} seed ${seed}`);
-      assert(path[0].r === 0 && path[0].c === 0, `starts at origin ${size}`);
-      const last = path[path.length - 1];
-      assert(
-        last.r === size - 1 && last.c === size - 1,
-        `ends at exit ${size} seed ${seed}`
-      );
-      // Path steps are adjacent and open
-      let ok = true;
-      for (let i = 1; i < path.length; i++) {
-        if (
-          !canMove(
-            maze.cells,
-            path[i - 1].r,
-            path[i - 1].c,
-            path[i].r,
-            path[i].c
-          )
-        ) {
-          ok = false;
-          break;
+      for (const detour of [0, 1, 2, 3, 4]) {
+        const maze = generateMaze(size, seed, detour);
+        const path = solveBFS(maze);
+        assert(path.length > 0, `solvable ${size} seed ${seed} detour ${detour}`);
+        assert(
+          path[0].r === maze.start.r && path[0].c === maze.start.c,
+          `starts at maze.start ${size} d${detour}`
+        );
+        const last = path[path.length - 1];
+        assert(
+          last.r === maze.end.r && last.c === maze.end.c,
+          `ends at maze.end ${size} seed ${seed} d${detour}`
+        );
+        let ok = true;
+        for (let i = 1; i < path.length; i++) {
+          if (
+            !canMove(
+              maze.cells,
+              path[i - 1].r,
+              path[i - 1].c,
+              path[i].r,
+              path[i].c
+            )
+          ) {
+            ok = false;
+            break;
+          }
         }
+        assert(ok, `path corridors valid ${size} seed ${seed} d${detour}`);
       }
-      assert(ok, `path corridors valid ${size} seed ${seed}`);
     }
   }
 }
@@ -148,7 +152,7 @@ function assert(cond, msg) {
   assert(hints[0].r === sol[1].r && hints[0].c === sol[1].c, "hint follows solution");
 }
 
-// Higher detour tends to more dead ends and junctions
+// Higher detour tends to more junctions / harder structure
 {
   const n = 12;
   const samples = 20;
@@ -156,22 +160,39 @@ function assert(cond, msg) {
   let sumExpertDead = 0;
   let sumSimpleJunctions = 0;
   let sumExpertJunctions = 0;
+  let sumConfuseJunctions = 0;
+  let sumConfuseLong = 0;
+  let varyStart = 0;
   for (let i = 0; i < samples; i++) {
     const simple = analyzeMaze(generateMaze(n, 1000 + i, 0));
     const expert = analyzeMaze(generateMaze(n, 1000 + i, 3));
+    const confuse = generateMaze(n, 1000 + i, 4);
+    const confuseStats = analyzeMaze(confuse);
+    const spurs = analyzeSpurs(confuse);
     sumSimpleDead += simple.deadEnds;
     sumExpertDead += expert.deadEnds;
     sumSimpleJunctions += simple.junctions;
     sumExpertJunctions += expert.junctions;
+    sumConfuseJunctions += confuseStats.junctions;
+    sumConfuseLong += spurs.longSpurs;
+    if (confuse.start.r !== 0 || confuse.start.c !== 0 || confuse.end.r !== n - 1 || confuse.end.c !== n - 1) {
+      varyStart++;
+    }
   }
   assert(
     sumExpertDead / samples > sumSimpleDead / samples,
-    "expert style averages more dead ends than simple"
+    "very tricky averages more dead ends than simple"
   );
   assert(
     sumExpertJunctions / samples > sumSimpleJunctions / samples,
-    "expert style averages more junctions than simple"
+    "very tricky averages more junctions than simple"
   );
+  assert(
+    sumConfuseJunctions / samples > sumSimpleJunctions / samples,
+    "confusing paths averages more junctions than simple"
+  );
+  assert(sumConfuseLong / samples >= 1, "confusing paths usually has long false paths");
+  assert(varyStart >= samples * 0.5, "confusing paths often varies start/end from corners");
 }
 
 // Labels
@@ -184,6 +205,7 @@ function assert(cond, msg) {
   assert(detourLabel(1) === "Lots of paths", "lots of paths style");
   assert(detourLabel(2) === "Tricky dead ends", "tricky dead ends style");
   assert(detourLabel(3) === "Very tricky", "very tricky style");
+  assert(detourLabel(4) === "Confusing paths", "confusing paths style");
   assert(formatTime(65000) === "1:05.0", "formatTime");
 }
 

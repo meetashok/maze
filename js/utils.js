@@ -59,8 +59,8 @@ export const DIFFICULTY_PRESETS = [
 ];
 
 export function detourLabel(detour) {
-  const labels = ["Simple", "Lots of paths", "Tricky dead ends", "Very tricky"];
-  const d = Math.max(0, Math.min(3, detour | 0));
+  const labels = ["Simple", "Lots of paths", "Tricky dead ends", "Very tricky", "Confusing paths"];
+  const d = Math.max(0, Math.min(4, detour | 0));
   return labels[d];
 }
 
@@ -77,7 +77,7 @@ export function parseUrlParams(search = window.location.search) {
     Number.isFinite(sizeRaw) && sizeRaw >= 4 && sizeRaw <= 20 ? sizeRaw : null;
   const seed = Number.isFinite(seedRaw) && seedRaw > 0 ? seedRaw >>> 0 : null;
   const detour =
-    Number.isFinite(detourRaw) && detourRaw >= 0 && detourRaw <= 3
+    Number.isFinite(detourRaw) && detourRaw >= 0 && detourRaw <= 4
       ? detourRaw
       : null;
 
