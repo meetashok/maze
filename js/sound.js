@@ -90,10 +90,11 @@ export function bindSoundToggle(btn) {
 
   const sync = () => {
     const on = isSoundOn();
+    // Toggle pattern: pressed = sound ON. Label stays "Sound".
     btn.setAttribute("aria-pressed", on ? "true" : "false");
+    btn.setAttribute("aria-label", "Sound");
     btn.textContent = on ? "🔊" : "🔇";
-    btn.title = on ? "Sound on — tap to mute" : "Sound muted — tap to unmute";
-    btn.setAttribute("aria-label", on ? "Mute sound" : "Unmute sound");
+    btn.title = on ? "Sound on" : "Sound off";
   };
   sync();
   btn.addEventListener("click", () => {

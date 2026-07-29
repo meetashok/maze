@@ -67,9 +67,19 @@
 
 .memory-card-back {
   background: linear-gradient(145deg, #1f8a7e, #14665d);
-  color: rgba(255, 255, 255, 0.9);
+  color: #fff;
   font-family: var(--font-display);
-  font-size: clamp(1.4rem, 5vw, 2rem);
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  font-weight: 800;
+  border: 2px solid rgba(255, 255, 255, 0.35);
+  box-shadow:
+    0 2px 0 rgba(20, 102, 93, 0.45),
+    var(--shadow);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+}
+
+.memory-card:not(.is-flipped) .memory-card-back {
+  outline: 1px solid rgba(36, 48, 55, 0.12);
 }
 
 .memory-card-front {
