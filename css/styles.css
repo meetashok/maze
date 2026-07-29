@@ -939,6 +939,44 @@ a {
   font-size: 0.95rem;
 }
 
+/* —— Shared parent tips —— */
+.parent-tips,
+.trace-parent-tips {
+  margin: 4px 0 0;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+}
+
+.parent-tips > summary,
+.trace-parent-tips > summary {
+  cursor: pointer;
+  font-weight: 800;
+  color: var(--teal-deep);
+  list-style: none;
+}
+
+.parent-tips > summary::-webkit-details-marker,
+.trace-parent-tips > summary::-webkit-details-marker {
+  display: none;
+}
+
+.parent-tips-body,
+.trace-parent-tips-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  font-size: 0.95rem;
+}
+
+.parent-tips-body p {
+  margin: 0;
+}
+
 .footer {
   text-align: center;
   color: var(--ink-soft);
