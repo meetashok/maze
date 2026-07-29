@@ -260,7 +260,7 @@ input {
 .game-nav-primary {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: repeat(var(--game-slots, 3), minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(68px, 1fr));
   gap: 6px;
   min-width: 0;
 }
@@ -394,6 +394,8 @@ input {
 .landing-card:nth-child(1) .landing-card-art { background: rgba(31, 138, 126, 0.18); }
 .landing-card:nth-child(2) .landing-card-art { background: rgba(255, 107, 74, 0.18); }
 .landing-card:nth-child(3) .landing-card-art { background: rgba(92, 124, 250, 0.18); }
+.landing-card:nth-child(4) .landing-card-art { background: rgba(255, 200, 87, 0.28); }
+.landing-card:nth-child(5) .landing-card-art { background: rgba(199, 125, 255, 0.2); }
 
 .landing-card-art {
   flex: 0 0 auto;

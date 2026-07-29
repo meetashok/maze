@@ -1,11 +1,13 @@
 /* Minimal offline cache for Puzzle Play */
-const CACHE = "puzzle-play-v1";
+const CACHE = "puzzle-play-v2";
 const ASSETS = [
   "./",
   "./index.html",
   "./css/styles.css",
   "./css/dots.css",
   "./css/trace.css",
+  "./css/memory.css",
+  "./css/search.css",
   "./js/hub.js",
   "./js/common.js",
   "./js/confetti.js",
@@ -20,6 +22,10 @@ const ASSETS = [
   "./js/dots-library.json",
   "./js/trace.js",
   "./js/trace-tips.js",
+  "./js/memory.js",
+  "./js/memory-themes.json",
+  "./js/search.js",
+  "./js/search-words.json",
   "./manifest.json",
 ];
 

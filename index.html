@@ -3,16 +3,16 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Kid-friendly puzzle games — mazes, connect the dots, and trace letters!" />
+    <meta name="description" content="Kid-friendly puzzle games — mazes, connect the dots, tracing, memory, and word search!" />
     <meta name="theme-color" content="#2a9d8f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
     <link rel="manifest" href="manifest.json" />
-    <title>Puzzle Play — Mazes, Dots & Trace</title>
+    <title>Puzzle Play — Mazes, Dots & More</title>
     <script>
       /* Set <base> before CSS/JS so /connect and /trace still load assets. */
       (function () {
-        var games = { maze: 1, mazes: 1, connect: 1, dots: 1, trace: 1 };
+        var games = { maze: 1, mazes: 1, connect: 1, dots: 1, trace: 1, memory: 1, match: 1, search: 1, words: 1 };
         var parts = location.pathname.split("/").filter(Boolean);
         var isGhProject = /\.github\.io$/i.test(location.hostname) && parts.length >= 1;
         var base;
@@ -39,6 +39,8 @@
     <link rel="stylesheet" href="css/styles.css" />
     <link rel="stylesheet" href="css/dots.css" />
     <link rel="stylesheet" href="css/trace.css" />
+    <link rel="stylesheet" href="css/memory.css" />
+    <link rel="stylesheet" href="css/search.css" />
     <script>
       (function () {
         try {
@@ -58,6 +60,8 @@
         <div class="top-bar-actions">
           <p id="brand-date" class="daily-chip" hidden></p>
           <p id="dots-daily-chip" class="daily-chip" hidden></p>
+          <p id="memory-daily-chip" class="daily-chip" hidden></p>
+          <p id="search-daily-chip" class="daily-chip" hidden></p>
           <button type="button" id="sound-toggle" class="sound-toggle" aria-pressed="true" aria-label="Mute sound" title="Sound on">🔊</button>
           <label class="theme-swap" aria-label="Toggle light or dark theme" title="Light / dark">
             <input type="checkbox" id="theme-toggle" checked />
@@ -78,7 +82,7 @@
       <div id="game-home" class="game-panel landing-panel">
         <section class="landing" aria-label="Choose a game">
           <h1 class="landing-title">Puzzle Play</h1>
-          <p class="landing-lead">Three fun puzzles for little fingers.</p>
+          <p class="landing-lead">Five fun puzzles for little fingers.</p>
           <div id="landing-cards" class="landing-cards"></div>
         </section>
       </div>
@@ -350,6 +354,125 @@
         </main>
       </div>
 
+      <!-- Memory Match -->
+      <div id="game-memory" class="game-panel" hidden>
+        <main class="main">
+          <section class="quick-controls" aria-label="Memory options">
+            <div class="control-block">
+              <p class="control-label">Theme</p>
+              <div id="memory-categories" class="category-buttons" role="group" aria-label="Card theme"></div>
+            </div>
+            <div class="control-block">
+              <p class="control-label">Difficulty</p>
+              <div id="memory-difficulty" class="diff-buttons" role="group" aria-label="Difficulty" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+                <button type="button" class="diff-btn" data-diff="easy" aria-pressed="false">Easy</button>
+                <button type="button" class="diff-btn is-active" data-diff="medium" aria-pressed="true">Medium</button>
+                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
+                <button type="button" class="diff-btn" data-diff="expert" aria-pressed="false">Expert</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="memory-panel" aria-label="Memory match">
+            <p id="memory-status" class="memory-status">Flip two cards to find a pair</p>
+            <div class="memory-stats" aria-live="polite">
+              <span id="memory-flips">Flips: 0</span>
+              <span id="memory-timer-display" class="timer-display">0:00.0</span>
+              <span id="memory-best-display" class="best-display">Best: —</span>
+            </div>
+            <div id="memory-stage" class="memory-stage"></div>
+            <p id="memory-float" class="memory-float" hidden>Nice!</p>
+            <p id="memory-live" class="memory-live" aria-live="assertive"></p>
+            <div id="memory-celebrate" class="celebrate-overlay" hidden aria-hidden="true" role="dialog" aria-label="Puzzle complete">
+              <span class="celebrate-emoji" aria-hidden="true">🃏</span>
+              <p class="celebrate-title">You found them all!</p>
+              <p class="celebrate-detail"></p>
+              <div class="celebrate-actions">
+                <button type="button" class="btn btn-secondary" data-celebrate-again>Play Again</button>
+                <button type="button" class="btn btn-primary" data-celebrate-new>New Game</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="primary-actions" aria-label="Memory actions">
+            <button type="button" id="memory-btn-new" class="btn btn-primary">New Game</button>
+            <button type="button" id="memory-btn-reset" class="btn btn-secondary">Restart</button>
+            <button type="button" id="memory-btn-daily" class="btn btn-secondary">Daily Match</button>
+          </section>
+
+          <section class="toolbar" aria-label="Memory controls">
+            <div class="btn-row">
+              <button type="button" id="memory-btn-share" class="btn btn-ghost">Share</button>
+              <button type="button" id="memory-btn-print" class="btn btn-ghost">Print</button>
+            </div>
+            <div class="timer-row">
+              <label class="toggle">
+                <input type="checkbox" id="memory-timer-toggle" checked />
+                <span>Timer</span>
+              </label>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- Word Search -->
+      <div id="game-search" class="game-panel" hidden>
+        <main class="main">
+          <section class="quick-controls" aria-label="Word search options">
+            <div class="control-block">
+              <p class="control-label">Category</p>
+              <div id="search-categories" class="category-buttons" role="group" aria-label="Word category"></div>
+            </div>
+            <div class="control-block">
+              <p class="control-label">Difficulty</p>
+              <div id="search-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
+                <button type="button" class="diff-btn is-active" data-diff="easy" aria-pressed="true">Easy</button>
+                <button type="button" class="diff-btn" data-diff="medium" aria-pressed="false">Medium</button>
+                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="search-panel" aria-label="Word search puzzle">
+            <p id="search-status" class="search-status">Find the hidden words</p>
+            <div id="search-preview" class="search-preview" aria-label="Words to find"></div>
+            <div id="search-stage" class="search-stage"></div>
+            <div id="search-word-list" hidden></div>
+            <p id="search-found-toast" class="search-found-toast" hidden></p>
+            <div id="search-celebrate" class="celebrate-overlay" hidden aria-hidden="true" role="dialog" aria-label="Puzzle complete">
+              <span class="celebrate-emoji" aria-hidden="true">🔍</span>
+              <p class="celebrate-title">You found them all!</p>
+              <p class="celebrate-detail"></p>
+              <div class="celebrate-actions">
+                <button type="button" class="btn btn-secondary" data-celebrate-again>Play Again</button>
+                <button type="button" class="btn btn-primary" data-celebrate-new>New Puzzle</button>
+              </div>
+            </div>
+          </section>
+
+          <section class="primary-actions" aria-label="Word search actions">
+            <button type="button" id="search-btn-new" class="btn btn-primary">New Puzzle</button>
+            <button type="button" id="search-btn-reset" class="btn btn-secondary">Restart</button>
+            <button type="button" id="search-btn-daily" class="btn btn-secondary">Daily Puzzle</button>
+          </section>
+
+          <section class="toolbar" aria-label="Word search controls">
+            <div class="btn-row">
+              <button type="button" id="search-btn-show" class="btn btn-ghost" aria-pressed="false">Show All</button>
+              <button type="button" id="search-btn-share" class="btn btn-ghost">Share</button>
+              <button type="button" id="search-btn-print" class="btn btn-ghost">Print</button>
+            </div>
+            <div class="timer-row">
+              <label class="toggle">
+                <input type="checkbox" id="search-timer-toggle" checked />
+                <span>Timer</span>
+              </label>
+              <span id="search-timer-display" class="timer-display">0:00.0</span>
+            </div>
+          </section>
+        </main>
+      </div>
+
       <footer class="footer">
         <p class="footer-howto" id="footer-howto">Choose a game above. Tap the home button any time to come back here.</p>
         <p class="footer-share">
@@ -533,6 +656,51 @@
         </fieldset>
 
         <button type="button" id="trace-print-go" class="btn btn-primary btn-block">Print</button>
+      </div>
+    </div>
+
+    <!-- Memory print -->
+    <div id="memory-print-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="memory-print-modal-title">
+      <div class="modal-card">
+        <header class="modal-header">
+          <h2 id="memory-print-modal-title">Print memory cards</h2>
+          <button type="button" id="memory-print-modal-close" class="btn btn-icon" aria-label="Close">×</button>
+        </header>
+        <p class="print-bulk-help">Prints a numbered card grid plus an emoji answer key you can cut out.</p>
+        <button type="button" id="memory-print-go" class="btn btn-primary btn-block">Print</button>
+      </div>
+    </div>
+
+    <!-- Word search print -->
+    <div id="search-print-modal" class="modal" hidden aria-hidden="true" role="dialog" aria-labelledby="search-print-modal-title">
+      <div class="modal-card modal-card-wide">
+        <header class="modal-header">
+          <h2 id="search-print-modal-title">Print word search</h2>
+          <button type="button" id="search-print-modal-close" class="btn btn-icon" aria-label="Close">×</button>
+        </header>
+        <fieldset class="print-fieldset">
+          <legend>Layout</legend>
+          <label class="radio">
+            <input type="radio" name="search-print-layout" value="single" checked />
+            One puzzle
+          </label>
+          <label class="radio">
+            <input type="radio" name="search-print-layout" value="batch2" />
+            Worksheet — 2 puzzles
+          </label>
+        </fieldset>
+        <fieldset class="print-fieldset">
+          <legend>Answer key</legend>
+          <label class="radio">
+            <input type="radio" name="search-print-solution" value="no" checked />
+            Puzzle only
+          </label>
+          <label class="radio">
+            <input type="radio" name="search-print-solution" value="yes" />
+            Include answer key page
+          </label>
+        </fieldset>
+        <button type="button" id="search-print-go" class="btn btn-primary btn-block">Print</button>
       </div>
     </div>
 

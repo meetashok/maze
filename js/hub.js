@@ -1,12 +1,14 @@
 /**
  * Game Hub — landing page, navigation, and shared shell.
  *
- * URLs: / (home) · /maze · /connect · /trace  (legacy #hash links still redirect)
+ * URLs: / (home) · /maze · /connect · /trace · /memory · /search
  */
 
 import { MazeApp } from "./ui.js";
 import { DotsApp } from "./dots.js";
 import { TraceApp } from "./trace.js";
+import { MemoryApp } from "./memory.js";
+import { SearchApp } from "./search.js";
 import {
   parseGameRoute,
   setGameRoute,
@@ -53,12 +55,30 @@ export const GAMES = {
     howto: "Start at the glowing green dot and follow each dashed stroke. Print packs for crayon practice!",
     cardBlurb: "Learn to write letters!",
   },
+  memory: {
+    title: "Memory Match",
+    short: "Memory",
+    emoji: "🃏",
+    tagline: "Flip cards — find the pairs",
+    description: "A card-matching memory game for little kids — tap to flip, find the pairs.",
+    howto: "Flip two cards. If they match, they stay up. Find every pair!",
+    cardBlurb: "Flip cards and find pairs!",
+  },
+  search: {
+    title: "Word Search",
+    short: "Word Search",
+    emoji: "🔍",
+    tagline: "Find the hidden words",
+    description: "Kid-friendly word search puzzles — play online or print worksheets.",
+    howto: "Drag across letters to find each word in the list.",
+    cardBlurb: "Find the hidden words!",
+  },
 };
 
 const HOME_META = {
   title: "Puzzle Play",
   tagline: "Pick a game and play!",
-  description: "Kid-friendly puzzle games — mazes, connect the dots, and trace letters!",
+  description: "Kid-friendly puzzle games — mazes, dots, tracing, memory, and word search!",
   howto: "Choose a game below. Tap the home button any time to come back here.",
 };
 
@@ -70,6 +90,8 @@ class GameHub {
     this.mazeApp = null;
     this.dotsApp = null;
     this.traceApp = null;
+    this.memoryApp = null;
+    this.searchApp = null;
     this.els = {};
   }
 
@@ -82,6 +104,8 @@ class GameHub {
       this.mazeApp?._redraw?.();
       this.dotsApp?._render?.();
       this.traceApp?._render?.();
+      this.memoryApp?._render?.();
+      this.searchApp?._render?.();
     });
 
     let bootRoute = parseGameRoute();
@@ -99,6 +123,12 @@ class GameHub {
 
     this.traceApp = new TraceApp();
     await this.traceApp.init();
+
+    this.memoryApp = new MemoryApp();
+    await this.memoryApp.init();
+
+    this.searchApp = new SearchApp();
+    await this.searchApp.init();
 
     this._bindNav();
     this._applyRoute(bootRoute, true);
@@ -120,6 +150,8 @@ class GameHub {
       panelMazes: $("game-mazes"),
       panelDots: $("game-dots"),
       panelTrace: $("game-trace"),
+      panelMemory: $("game-memory"),
+      panelSearch: $("game-search"),
       footerHowto: $("footer-howto"),
     };
   }
@@ -190,6 +222,8 @@ class GameHub {
     if (game === "home") return this.els.landing;
     if (game === "dots") return this.els.panelDots;
     if (game === "trace") return this.els.panelTrace;
+    if (game === "memory") return this.els.panelMemory;
+    if (game === "search") return this.els.panelSearch;
     return this.els.panelMazes;
   }
 
@@ -199,6 +233,8 @@ class GameHub {
     let params = {};
     if (game === "dots") params = this.dotsApp?.getShareParams?.() || {};
     if (game === "trace") params = this.traceApp?.getShareParams?.() || {};
+    if (game === "memory") params = this.memoryApp?.getShareParams?.() || {};
+    if (game === "search") params = this.searchApp?.getShareParams?.() || {};
     setGameRoute(game, params, false);
     const sp = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
@@ -212,7 +248,14 @@ class GameHub {
     this.activeGame = next;
     this._syncNavActive(next);
 
-    const panels = [this.els.landing, this.els.panelMazes, this.els.panelDots, this.els.panelTrace];
+    const panels = [
+      this.els.landing,
+      this.els.panelMazes,
+      this.els.panelDots,
+      this.els.panelTrace,
+      this.els.panelMemory,
+      this.els.panelSearch,
+    ];
     for (const panel of panels) {
       if (panel) panel.hidden = panel !== this._panelFor(next);
     }
@@ -220,7 +263,7 @@ class GameHub {
     if (next === "home") {
       if (this.els.brand) this.els.brand.textContent = HOME_META.title;
       if (this.els.tagline) this.els.tagline.textContent = HOME_META.tagline;
-      document.title = `${HOME_META.title} — Mazes, Dots & Trace`;
+      document.title = `${HOME_META.title} — Mazes, Dots & More`;
       if (this.els.footerHowto) this.els.footerHowto.textContent = HOME_META.howto;
       const desc = document.querySelector('meta[name="description"]');
       if (desc) desc.content = HOME_META.description;
@@ -241,10 +284,14 @@ class GameHub {
 
     if (next === "dots") this.dotsApp?.onHashChange(params);
     if (next === "trace") this.traceApp?.onHashChange(params);
+    if (next === "memory") this.memoryApp?.onHashChange(params);
+    if (next === "search") this.searchApp?.onHashChange(params);
     if (initial) {
       if (next === "dots") this.dotsApp?._syncUrl?.();
       if (next === "trace") this.traceApp?._syncUrl?.();
       if (next === "mazes") this.mazeApp?._syncUrl?.();
+      if (next === "memory") this.memoryApp?._syncUrl?.();
+      if (next === "search") this.searchApp?._syncUrl?.();
     }
   }
 }

@@ -44,6 +44,14 @@ export function dailyTraceSeed(date = new Date()) {
   return hashString(`daily-trace:${todayDateString(date)}`);
 }
 
+export function dailyMemorySeed(date = new Date()) {
+  return hashString(`daily-memory:${todayDateString(date)}`);
+}
+
+export function dailySearchSeed(date = new Date()) {
+  return hashString(`daily-search:${todayDateString(date)}`);
+}
+
 export function formatTime(ms) {
   const totalSec = Math.floor(ms / 1000);
   const m = Math.floor(totalSec / 60);
@@ -78,6 +86,8 @@ export const GAME_PATHS = {
   mazes: "maze",
   dots: "connect",
   trace: "trace",
+  memory: "memory",
+  search: "search",
 };
 
 /** Map URL path segments (and legacy names) → internal game id. */
@@ -87,6 +97,11 @@ export const PATH_TO_GAME = {
   connect: "dots",
   dots: "dots",
   trace: "trace",
+  memory: "memory",
+  match: "memory",
+  search: "search",
+  words: "search",
+  wordsearch: "search",
 };
 
 /**

@@ -37,7 +37,11 @@ import {
 } from "./trace.js";
 import { getGlyphTip, ENCOURAGE_TIPS } from "./trace-tips.js";
 import { letterPaths, numberPaths, shapePaths } from "./dots-shapes.js";
+import { buildMemoryDeck, MEMORY_DIFFICULTY, dailyMemorySeed } from "./memory.js";
+import { buildWordSearch, SEARCH_DIFFICULTY, lineCells, dailySearchSeed } from "./search.js";
 import library from "./dots-library.json" with { type: "json" };
+import memoryThemes from "./memory-themes.json" with { type: "json" };
+import searchWords from "./search-words.json" with { type: "json" };
 
 let failed = 0;
 
@@ -197,10 +201,14 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(GAME_PATHS.mazes === "maze", "mazes path is /maze");
   assert(GAME_PATHS.dots === "connect", "dots path is /connect");
   assert(GAME_PATHS.trace === "trace", "trace path is /trace");
+  assert(GAME_PATHS.memory === "memory", "memory path is /memory");
+  assert(GAME_PATHS.search === "search", "search path is /search");
   assert(GAME_PATHS.home === "", "home path is site root");
   assert(PATH_TO_GAME.maze === "mazes", "maze maps to mazes");
   assert(PATH_TO_GAME.connect === "dots", "connect maps to dots");
   assert(PATH_TO_GAME.trace === "trace", "trace maps to trace");
+  assert(PATH_TO_GAME.memory === "memory", "memory maps to memory");
+  assert(PATH_TO_GAME.search === "search", "search maps to search");
 }
 
 // Dots sampling
@@ -376,6 +384,46 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
     assert(getGlyphTip("number", n)?.steps?.length > 0, `tip for ${n}`);
   }
   assert(ENCOURAGE_TIPS.length >= 5, "encouragement tips available");
+}
+
+// Memory Match
+{
+  const deck = buildMemoryDeck(memoryThemes, "animals", "easy", 42);
+  assert(deck.cards.length === 4, "easy memory has 4 cards");
+  assert(deck.pairs === 2, "easy memory has 2 pairs");
+  const ids = deck.cards.map((c) => c.pairId).sort();
+  assert(ids[0] === ids[1] && ids[2] === ids[3], "memory cards come in pairs");
+  const med = buildMemoryDeck(memoryThemes, "food", "medium", 7);
+  assert(med.cards.length === MEMORY_DIFFICULTY.medium.pairs * 2, "medium memory card count");
+  const a = buildMemoryDeck(memoryThemes, "animals", "hard", 99);
+  const b = buildMemoryDeck(memoryThemes, "animals", "hard", 99);
+  assert(JSON.stringify(a.cards) === JSON.stringify(b.cards), "memory deck deterministic");
+  const d = new Date(2026, 6, 28);
+  assert(dailyMemorySeed(d) === dailyMemorySeed(d) && dailyMemorySeed(d) > 0, "daily memory seed stable");
+  assert(memoryThemes.categories.length >= 6, "memory themes loaded");
+}
+
+// Word Search
+{
+  const puz = buildWordSearch(searchWords, "animals", "easy", 42);
+  assert(puz.size === SEARCH_DIFFICULTY.easy.size, "easy search grid size");
+  assert(puz.words.length >= 3, "easy search places several words");
+  for (const w of puz.words) {
+    const spelled = w.cells.map((cell) => puz.grid[cell.r][cell.c]).join("");
+    assert(spelled === w.word, `placed word ${w.word} matches cells`);
+  }
+  const hard = buildWordSearch(searchWords, "space", "hard", 123);
+  assert(hard.size === 14 && hard.words.length >= 6, "hard search has larger grid");
+  const a = buildWordSearch(searchWords, "food", "medium", 55);
+  const b = buildWordSearch(searchWords, "food", "medium", 55);
+  assert(JSON.stringify(a.grid) === JSON.stringify(b.grid), "word search deterministic");
+  const line = lineCells({ r: 0, c: 0 }, { r: 3, c: 0 });
+  assert(line.length === 4 && line[3].r === 3, "lineCells vertical");
+  const diag = lineCells({ r: 1, c: 1 }, { r: 4, c: 4 });
+  assert(diag.every((p, i) => p.r === 1 + i && p.c === 1 + i), "lineCells diagonal");
+  const d = new Date(2026, 6, 28);
+  assert(dailySearchSeed(d) === dailySearchSeed(d) && dailySearchSeed(d) > 0, "daily search seed stable");
+  assert(searchWords.categories.length >= 6, "search word lists loaded");
 }
 
 if (failed) {

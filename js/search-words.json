@@ -1,0 +1,40 @@
+{
+  "categories": [
+    {
+      "id": "animals",
+      "name": "Animals",
+      "emoji": "🐾",
+      "words": ["CAT", "DOG", "FISH", "BIRD", "FROG", "BEAR", "DUCK", "LION", "DEER", "WOLF", "HORSE", "TIGER", "SNAKE", "BUNNY", "MOUSE"]
+    },
+    {
+      "id": "food",
+      "name": "Food",
+      "emoji": "🍎",
+      "words": ["PIE", "JAM", "EGG", "CAKE", "MILK", "RICE", "CORN", "SOUP", "FISH", "TACO", "PIZZA", "BREAD", "GRAPE", "CANDY", "APPLE"]
+    },
+    {
+      "id": "colors",
+      "name": "Colors",
+      "emoji": "🌈",
+      "words": ["RED", "BLUE", "PINK", "GOLD", "GRAY", "GREEN", "WHITE", "BLACK", "BROWN", "ORANGE", "PURPLE", "YELLOW", "SILVER"]
+    },
+    {
+      "id": "space",
+      "name": "Space",
+      "emoji": "⭐",
+      "words": ["SUN", "MOON", "STAR", "MARS", "COMET", "EARTH", "PLUTO", "ORBIT", "ROCKET", "SATURN", "GALAXY", "PLANET", "METEOR"]
+    },
+    {
+      "id": "family",
+      "name": "Family",
+      "emoji": "🏠",
+      "words": ["MOM", "DAD", "SIS", "BRO", "BABY", "AUNT", "UNCLE", "NANA", "PAPA", "FAMILY", "SISTER", "BROTHER", "COUSIN"]
+    },
+    {
+      "id": "seasonal",
+      "name": "Seasonal",
+      "emoji": "🎄",
+      "words": ["ELF", "HAT", "SNOW", "BELL", "STAR", "TREE", "GIFT", "CANDY", "SANTA", "ANGEL", "HOLLY", "SLEIGH", "REINDEER"]
+    }
+  ]
+}
