@@ -16,7 +16,9 @@ import {
 
 const TOTAL_ROUNDS = 5;
 const ANSWER_PAUSE_MS = 1000;
+const REVEAL_PAUSE_MS = 1400;
 const DEAL_MS = 480;
+const MAX_WRONG_TRIES = 3;
 
 /** Category mode: three from match, one from odd. */
 const EASY_SETS = [
@@ -131,7 +133,7 @@ export class OddApp {
     this.difficulty = "easy";
     this.sessionSeed = 1;
     this.roundIndex = 0;
-    this.score = 0;
+    this.wrongTries = 0;
     this.round = null;
     this.lock = false;
     this.completed = false;
@@ -212,7 +214,7 @@ export class OddApp {
     clearTimeout(this._dealTimer);
     this.sessionSeed = seed >>> 0 || 1;
     this.roundIndex = 0;
-    this.score = 0;
+    this.wrongTries = 0;
     this.lock = false;
     this.completed = false;
     this.usedIds = [];
@@ -224,17 +226,18 @@ export class OddApp {
       avoidIds: this.usedIds,
     });
     if (this.round.id) this.usedIds.push(this.round.id);
+    this.wrongTries = 0;
     this.lock = false;
-    this._updateScore();
+    this._updateProgress();
     this._updateStatus();
     this._render();
     this._playDeal();
     if (sync) this._syncUrl();
   }
 
-  _updateScore() {
+  _updateProgress() {
     if (this.els.score) {
-      this.els.score.textContent = `Round ${Math.min(this.roundIndex + 1, TOTAL_ROUNDS)} of ${TOTAL_ROUNDS} · Score ${this.score}`;
+      this.els.score.textContent = `Puzzle ${Math.min(this.roundIndex + 1, TOTAL_ROUNDS)} of ${TOTAL_ROUNDS}`;
     }
   }
 
@@ -281,26 +284,50 @@ export class OddApp {
 
   _choose(index) {
     if (this.lock || this.completed || !this.round) return;
-    this.lock = true;
+    const btn = this.els.stage?.querySelector(`.odd-tile[data-index="${index}"]`);
+    if (!btn || btn.disabled) return;
+
     const correct = this.round.tiles[index]?.isOdd;
+    const why = this.round.reason || "";
+
+    if (correct) {
+      this.lock = true;
+      this._markResolved(index);
+      playPop();
+      this._updateStatus(why ? `You found it! ${why}.` : "You found it!");
+      clearTimeout(this._answerTimer);
+      this._answerTimer = setTimeout(() => this._nextAfterAnswer(), ANSWER_PAUSE_MS);
+      return;
+    }
+
+    // Wrong: soft feedback, keep trying (disable only this tile).
+    this.wrongTries += 1;
+    playBonk();
+    btn.disabled = true;
+    btn.classList.add("is-wrong", "is-shake");
+    setTimeout(() => btn.classList.remove("is-shake"), 320);
+
+    if (this.wrongTries >= MAX_WRONG_TRIES) {
+      this.lock = true;
+      this._markResolved(this.round.oddIndex);
+      this._updateStatus(why ? `This one! ${why}.` : "This is the odd one!");
+      clearTimeout(this._answerTimer);
+      this._answerTimer = setTimeout(() => this._nextAfterAnswer(), REVEAL_PAUSE_MS);
+      return;
+    }
+
+    const left = MAX_WRONG_TRIES - this.wrongTries;
+    this._updateStatus(
+      left === 1 ? "Not that one — one more try!" : "Not that one — try another!"
+    );
+  }
+
+  _markResolved(selectedIndex) {
     this.els.stage?.querySelectorAll(".odd-tile").forEach((btn, i) => {
       btn.disabled = true;
       if (this.round.tiles[i].isOdd) btn.classList.add("is-correct");
-      if (i === index) btn.classList.add("is-selected");
-      if (i === index && !correct) btn.classList.add("is-wrong");
+      if (i === selectedIndex) btn.classList.add("is-selected");
     });
-    const why = this.round.reason || "";
-    if (correct) {
-      this.score += 1;
-      playPop();
-      this._updateScore();
-      this._updateStatus(why ? `You found it! ${why}.` : "You found it!");
-    } else {
-      playBonk();
-      this._updateStatus(why ? `Not that one. ${why}.` : "Not that one — next round!");
-    }
-    clearTimeout(this._answerTimer);
-    this._answerTimer = setTimeout(() => this._nextAfterAnswer(), ANSWER_PAUSE_MS);
   }
 
   _nextAfterAnswer() {
@@ -319,7 +346,7 @@ export class OddApp {
     showCelebrationOverlay(this.els.celebrate, {
       emoji: "🎯",
       message: "Sharp eyes!",
-      detail: `Score: ${this.score}/${TOTAL_ROUNDS} · ${this.difficulty}`,
+      detail: `You finished ${TOTAL_ROUNDS} puzzles!`,
       againLabel: "Play Again",
       newLabel: "New Game",
       onAgain: () => this._restart(),

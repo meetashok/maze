@@ -93,6 +93,25 @@
   box-shadow:
     0 0 0 3px rgba(255, 107, 74, 0.28),
     0 6px 14px rgba(36, 48, 55, 0.1);
+  opacity: 0.72;
+  filter: saturate(0.7);
+}
+
+.odd-tile.is-shake {
+  animation: odd-shake 0.32s ease;
+}
+
+@keyframes odd-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
 }
 
 .odd-tile:disabled {
@@ -130,7 +149,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .odd-stage.is-dealing .odd-tile {
+  .odd-stage.is-dealing .odd-tile,
+  .odd-tile.is-shake {
     animation: none;
   }
 }
