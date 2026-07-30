@@ -106,6 +106,7 @@ export class MemoryApp {
     this.focusIndex = 0;
     this._stopCelebrate = null;
     this._mismatchTimer = 0;
+    this._dealTimer = 0;
     this.els = {};
     this.timer = new GameTimer((ms) => this._updateTimerDisplay(ms));
   }
@@ -263,6 +264,7 @@ export class MemoryApp {
     this._stopCelebrate = null;
     hideCelebrationOverlay(this.els.celebrate);
     clearTimeout(this._mismatchTimer);
+    clearTimeout(this._dealTimer);
     this.timer.reset();
     this.flipped = [];
     this.matched = new Set();
@@ -276,6 +278,7 @@ export class MemoryApp {
     this._updateBest();
     this._updateStatus();
     this._render();
+    this._playDealAnimation();
     if (sync) this._syncUrl();
   }
 
@@ -355,6 +358,46 @@ export class MemoryApp {
       stage.appendChild(btn);
     });
     this._syncCardDom();
+  }
+
+  /**
+   * Soft staggered jitter after New Game / Restart / first deal so the board
+   * visibly "refreshes" even when every card still shows the same green back.
+   */
+  _playDealAnimation() {
+    const stage = this.els.stage;
+    if (!stage) return;
+    const cards = [...stage.querySelectorAll(".memory-card")];
+    if (!cards.length) return;
+
+    const reduced =
+      typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this._announce("New cards ready");
+    if (this.els.status) this.els.status.textContent = "Cards shuffled!";
+
+    if (reduced) {
+      this._dealTimer = setTimeout(() => this._updateStatus(), 700);
+      return;
+    }
+
+    this.lock = true;
+    stage.classList.add("is-dealing");
+    cards.forEach((btn, i) => {
+      btn.classList.add("is-dealing");
+      btn.style.setProperty("--deal-delay", `${Math.min(i * 30, 360)}ms`);
+    });
+
+    const settleMs = 420 + Math.min(cards.length * 30, 360);
+    clearTimeout(this._dealTimer);
+    this._dealTimer = setTimeout(() => {
+      cards.forEach((btn) => {
+        btn.classList.remove("is-dealing");
+        btn.style.removeProperty("--deal-delay");
+      });
+      stage.classList.remove("is-dealing");
+      this.lock = false;
+      this._updateStatus();
+    }, settleMs);
   }
 
   /** Update face-up / matched classes without rebuilding the grid (keeps flips visible). */
