@@ -60,14 +60,21 @@
 
 .memory-card:disabled {
   cursor: default;
+}
+
+.memory-card:disabled:not(.is-animating) {
   opacity: 0.92;
 }
 
-.memory-card:not(:disabled):active {
+.memory-card:not(:disabled):active:not(.is-animating) {
   transform: translateY(2px);
   box-shadow:
     0 1px 0 #0c4f47,
     0 4px 10px rgba(20, 102, 93, 0.22);
+}
+
+.memory-card.is-animating {
+  pointer-events: none;
 }
 
 /* Soft shuffle settle when a new / restarted board is dealt */
@@ -124,7 +131,7 @@
   line-height: 1;
 }
 
-/* Face-down: big ? only — never the pair picture */
+/* Face-down: big ? only - never the pair picture */
 .memory-face--back {
   font-family: var(--font-display);
   color: #ffffff;
@@ -204,6 +211,55 @@
 .memory-card:focus-visible {
   outline: 3px solid #ffc857;
   outline-offset: 3px;
+}
+
+/* Reveal: hinge shut, then open onto the picture */
+.memory-card.is-flip-close {
+  animation: memory-flip-close 0.15s ease-in forwards;
+  transform-origin: center center;
+}
+
+.memory-card.is-flip-open {
+  animation: memory-flip-open 0.22s ease-out forwards;
+  transform-origin: center center;
+}
+
+/* Mismatch: soft fade away, then back face fades in */
+.memory-card.is-fade-out {
+  animation: memory-fade-out 0.18s ease forwards;
+}
+
+.memory-card.is-fade-in {
+  animation: memory-fade-in 0.2s ease forwards;
+}
+
+@keyframes memory-flip-close {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0.06); }
+}
+
+@keyframes memory-flip-open {
+  from { transform: scaleX(0.06); }
+  to { transform: scaleX(1); }
+}
+
+@keyframes memory-fade-out {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.9); }
+}
+
+@keyframes memory-fade-in {
+  from { opacity: 0; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-card.is-flip-close,
+  .memory-card.is-flip-open,
+  .memory-card.is-fade-out,
+  .memory-card.is-fade-in {
+    animation: none;
+  }
 }
 
 .memory-float {
