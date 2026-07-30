@@ -14,7 +14,9 @@ import {
   copyToClipboard,
 } from "./common.js";
 
-const TOTAL_ROUNDS = 5;
+const MILESTONE_EVERY = 5;
+const MILESTONE_MS = 1800;
+const AVOID_RECENT = 10;
 const ANSWER_PAUSE_MS = 1000;
 const REVEAL_PAUSE_MS = 1400;
 const DEAL_MS = 480;
@@ -133,10 +135,10 @@ export class OddApp {
     this.difficulty = "easy";
     this.sessionSeed = 1;
     this.roundIndex = 0;
+    this.solvedCount = 0;
     this.wrongTries = 0;
     this.round = null;
     this.lock = false;
-    this.completed = false;
     this.usedIds = [];
     this._stopCelebrate = null;
     this._answerTimer = 0;
@@ -214,9 +216,9 @@ export class OddApp {
     clearTimeout(this._dealTimer);
     this.sessionSeed = seed >>> 0 || 1;
     this.roundIndex = 0;
+    this.solvedCount = 0;
     this.wrongTries = 0;
     this.lock = false;
-    this.completed = false;
     this.usedIds = [];
     this._loadRound({ sync });
   }
@@ -225,7 +227,10 @@ export class OddApp {
     this.round = buildOddRound(deriveSeed(this.sessionSeed, this.roundIndex), this.difficulty, {
       avoidIds: this.usedIds,
     });
-    if (this.round.id) this.usedIds.push(this.round.id);
+    if (this.round.id) {
+      this.usedIds.push(this.round.id);
+      if (this.usedIds.length > AVOID_RECENT) this.usedIds.shift();
+    }
     this.wrongTries = 0;
     this.lock = false;
     this._updateProgress();
@@ -237,7 +242,7 @@ export class OddApp {
 
   _updateProgress() {
     if (this.els.score) {
-      this.els.score.textContent = `Puzzle ${Math.min(this.roundIndex + 1, TOTAL_ROUNDS)} of ${TOTAL_ROUNDS}`;
+      this.els.score.textContent = `Puzzle ${this.roundIndex + 1}`;
     }
   }
 
@@ -247,9 +252,7 @@ export class OddApp {
       this.els.status.textContent = msg;
       return;
     }
-    this.els.status.textContent = this.completed
-      ? "You spotted them all!"
-      : "Tap the one that does not belong";
+    this.els.status.textContent = "Tap the one that does not belong";
   }
 
   _playDeal() {
@@ -283,7 +286,7 @@ export class OddApp {
   }
 
   _choose(index) {
-    if (this.lock || this.completed || !this.round) return;
+    if (this.lock || !this.round) return;
     const btn = this.els.stage?.querySelector(`.odd-tile[data-index="${index}"]`);
     if (!btn || btn.disabled) return;
 
@@ -331,26 +334,30 @@ export class OddApp {
   }
 
   _nextAfterAnswer() {
-    if (this.roundIndex + 1 >= TOTAL_ROUNDS) {
-      this._onComplete();
+    this.solvedCount += 1;
+    this.roundIndex += 1;
+    if (this.solvedCount % MILESTONE_EVERY === 0) {
+      this._showMilestone(this.solvedCount);
       return;
     }
-    this.roundIndex += 1;
     this._loadRound();
   }
 
-  _onComplete() {
-    this.completed = true;
-    this._updateStatus();
-    this._stopCelebrate = celebrate(document.body, 3200);
+  _showMilestone(count) {
+    this._updateStatus(`Nice — ${count} puzzles done!`);
+    this._stopCelebrate?.();
+    this._stopCelebrate = celebrate(document.body, 2400);
     showCelebrationOverlay(this.els.celebrate, {
       emoji: "🎯",
-      message: "Sharp eyes!",
-      detail: `You finished ${TOTAL_ROUNDS} puzzles!`,
-      againLabel: "Play Again",
-      newLabel: "New Game",
-      onAgain: () => this._restart(),
-      onNew: () => this._newGame(),
+      message: count === MILESTONE_EVERY ? "Great start!" : "Keep going!",
+      detail: `${count} puzzles done!`,
+      hideActions: true,
+      autoMs: MILESTONE_MS,
+      onAuto: () => {
+        this._stopCelebrate?.();
+        this._stopCelebrate = null;
+        this._loadRound();
+      },
     });
   }
 
