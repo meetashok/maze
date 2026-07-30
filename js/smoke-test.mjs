@@ -360,6 +360,20 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   const a = letterPaths("A");
   assert(a?.paths?.length >= 2, "letter A has multiple strokes");
   assert(a.paths[0].length >= 2, "letter A stroke has points");
+  const I = letterPaths("I");
+  assert(I.paths.length === 3, "I has three strokes");
+  assert(Math.abs(I.paths[0][0].x - I.paths[0][1].x) < 0.01, "I first stroke is the vertical stem");
+  const M = letterPaths("M");
+  assert(M.paths.length === 4, "M uses four top-down strokes");
+  assert(M.paths[3][0].y <= M.paths[3][1].y, "M right stem pulls down");
+  const V = letterPaths("V");
+  assert(V.paths.length === 2, "V allows a lift between sides");
+  const O = letterPaths("O");
+  assert(O.paths[0].length >= 24, "O curve is densely sampled");
+  const g = letterPaths("g");
+  assert(g.paths.length === 1, "lowercase g is one continuous stroke");
+  const iDot = letterPaths("i");
+  assert(iDot.paths[1].length >= 8, "lowercase i tittle is a small circle");
 }
 
 // Manuscript stroke order: stems start at the top (y small), not the bottom

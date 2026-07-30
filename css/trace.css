@@ -246,6 +246,55 @@
   overscroll-behavior: none;
 }
 
+.trace-stage.is-word-mode {
+  display: block;
+  width: min(100%, 720px);
+  margin-inline: auto;
+}
+
+.trace-word-stage {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: center;
+  align-items: stretch;
+  gap: clamp(6px, 2vw, 14px);
+  width: 100%;
+  padding: 4px 2px 8px;
+}
+
+.trace-word-cell {
+  flex: 1 1 0;
+  min-width: 0;
+  max-width: 220px;
+  border-radius: 16px;
+  padding: 4px;
+  background: rgba(31, 138, 126, 0.06);
+  border: 2px solid transparent;
+  opacity: 0.55;
+  transition: opacity 0.2s, border-color 0.2s, background 0.2s;
+}
+
+.trace-word-cell.is-current {
+  opacity: 1;
+  border-color: var(--teal);
+  background: rgba(31, 138, 126, 0.12);
+  box-shadow: 0 4px 14px rgba(20, 102, 93, 0.12);
+}
+
+.trace-word-cell.is-done:not(.is-current) {
+  opacity: 0.7;
+  border-color: rgba(47, 158, 68, 0.35);
+  background: rgba(47, 158, 68, 0.08);
+}
+
+.trace-word-cell .trace-svg,
+.trace-word-cell .trace-print-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  aspect-ratio: 1;
+}
+
 .trace-guide {
   fill: none;
   stroke: var(--ink);
