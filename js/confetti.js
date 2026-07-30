@@ -86,14 +86,27 @@ export function celebrate(host, durationMs = 3200) {
 /**
  * Fill a shared celebration overlay with emoji, phrase, and action buttons.
  * @param {HTMLElement | null} overlay
- * @param {{ emoji?: string, message?: string, detail?: string, onAgain?: () => void, onNew?: () => void, againLabel?: string, newLabel?: string }} opts
+ * @param {{
+ *   emoji?: string,
+ *   message?: string,
+ *   detail?: string,
+ *   onAgain?: () => void,
+ *   onNew?: () => void,
+ *   againLabel?: string,
+ *   newLabel?: string,
+ *   hideActions?: boolean,
+ *   autoMs?: number,
+ *   onAuto?: () => void,
+ * }} opts
  */
 export function showCelebrationOverlay(overlay, opts = {}) {
   if (!overlay) return;
+  clearTimeout(overlay._autoTimer);
   const phrase = opts.message || WIN_PHRASES[Math.floor(Math.random() * WIN_PHRASES.length)];
   const emojiEl = overlay.querySelector(".celebrate-emoji");
   const titleEl = overlay.querySelector(".celebrate-title");
   const detailEl = overlay.querySelector(".celebrate-detail");
+  const actions = overlay.querySelector(".celebrate-actions");
   const againBtn = overlay.querySelector("[data-celebrate-again]");
   const newBtn = overlay.querySelector("[data-celebrate-new]");
 
@@ -103,6 +116,7 @@ export function showCelebrationOverlay(overlay, opts = {}) {
     detailEl.textContent = opts.detail || "";
     detailEl.hidden = !opts.detail;
   }
+  if (actions) actions.hidden = !!opts.hideActions;
   if (againBtn) {
     againBtn.textContent = opts.againLabel || "Play Again";
     againBtn.onclick = () => {
@@ -120,10 +134,21 @@ export function showCelebrationOverlay(overlay, opts = {}) {
 
   overlay.hidden = false;
   overlay.setAttribute("aria-hidden", "false");
+
+  if (opts.autoMs > 0) {
+    overlay._autoTimer = setTimeout(() => {
+      hideCelebrationOverlay(overlay);
+      opts.onAuto?.();
+    }, opts.autoMs);
+  }
 }
 
 export function hideCelebrationOverlay(overlay) {
   if (!overlay) return;
+  clearTimeout(overlay._autoTimer);
+  overlay._autoTimer = 0;
+  const actions = overlay.querySelector(".celebrate-actions");
+  if (actions) actions.hidden = false;
   overlay.hidden = true;
   overlay.setAttribute("aria-hidden", "true");
 }

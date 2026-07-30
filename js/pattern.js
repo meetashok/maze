@@ -15,7 +15,9 @@ import {
   copyToClipboard,
 } from "./common.js";
 
-const TOTAL_ROUNDS = 5;
+const MILESTONE_EVERY = 5;
+const MILESTONE_MS = 1800;
+const AVOID_RECENT = 12;
 const ANSWER_PAUSE_MS = 900;
 const REVEAL_PAUSE_MS = 1400;
 const DEAL_MS = 480;
@@ -193,10 +195,10 @@ export class PatternApp {
     this.difficulty = "easy";
     this.sessionSeed = 1;
     this.roundIndex = 0;
+    this.solvedCount = 0;
     this.round = null;
     this.lock = false;
     this.wrongTries = 0;
-    this.completed = false;
     this.usedKeys = [];
     this._stopCelebrate = null;
     this._answerTimer = 0;
@@ -275,9 +277,9 @@ export class PatternApp {
     clearTimeout(this._dealTimer);
     this.sessionSeed = seed >>> 0 || 1;
     this.roundIndex = 0;
+    this.solvedCount = 0;
     this.lock = false;
     this.wrongTries = 0;
-    this.completed = false;
     this.usedKeys = [];
     this._loadRound({ sync });
   }
@@ -286,19 +288,22 @@ export class PatternApp {
     this.round = buildPatternRound(deriveSeed(this.sessionSeed, this.roundIndex), this.difficulty, {
       avoidKeys: this.usedKeys,
     });
-    if (this.round.key) this.usedKeys.push(this.round.key);
+    if (this.round.key) {
+      this.usedKeys.push(this.round.key);
+      if (this.usedKeys.length > AVOID_RECENT) this.usedKeys.shift();
+    }
     this.lock = false;
     this.wrongTries = 0;
-    this._updateScore();
+    this._updateProgress();
     this._updateStatus();
     this._render();
     this._playDeal();
     if (sync) this._syncUrl();
   }
 
-  _updateScore() {
+  _updateProgress() {
     if (this.els.score) {
-      this.els.score.textContent = `Puzzle ${Math.min(this.roundIndex + 1, TOTAL_ROUNDS)} of ${TOTAL_ROUNDS}`;
+      this.els.score.textContent = `Puzzle ${this.roundIndex + 1}`;
     }
   }
 
@@ -306,10 +311,6 @@ export class PatternApp {
     if (!this.els.status) return;
     if (msg) {
       this.els.status.textContent = msg;
-      return;
-    }
-    if (this.completed) {
-      this.els.status.textContent = "You finished all the patterns!";
       return;
     }
     this.els.status.textContent = "What comes next in the pattern?";
@@ -394,7 +395,7 @@ export class PatternApp {
   }
 
   _choose(index) {
-    if (this.lock || this.completed || !this.round) return;
+    if (this.lock || !this.round) return;
     const btn = this.els.choices?.querySelector(`.pattern-choice[data-index="${index}"]`);
     if (!btn || btn.disabled) return;
 
@@ -446,26 +447,30 @@ export class PatternApp {
   }
 
   _nextAfterAnswer() {
-    if (this.roundIndex + 1 >= TOTAL_ROUNDS) {
-      this._onComplete();
+    this.solvedCount += 1;
+    this.roundIndex += 1;
+    if (this.solvedCount % MILESTONE_EVERY === 0) {
+      this._showMilestone(this.solvedCount);
       return;
     }
-    this.roundIndex += 1;
     this._loadRound();
   }
 
-  _onComplete() {
-    this.completed = true;
-    this._updateStatus();
-    this._stopCelebrate = celebrate(document.body, 3200);
+  _showMilestone(count) {
+    this._updateStatus(`Nice — ${count} puzzles done!`);
+    this._stopCelebrate?.();
+    this._stopCelebrate = celebrate(document.body, 2400);
     showCelebrationOverlay(this.els.celebrate, {
       emoji: "🔁",
-      message: "Pattern master!",
-      detail: `You finished ${TOTAL_ROUNDS} puzzles!`,
-      againLabel: "Play Again",
-      newLabel: "New Patterns",
-      onAgain: () => this._restart(),
-      onNew: () => this._newGame(),
+      message: count === MILESTONE_EVERY ? "Pattern pro!" : "Keep going!",
+      detail: `${count} puzzles done!`,
+      hideActions: true,
+      autoMs: MILESTONE_MS,
+      onAuto: () => {
+        this._stopCelebrate?.();
+        this._stopCelebrate = null;
+        this._loadRound();
+      },
     });
   }
 
