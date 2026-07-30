@@ -20,7 +20,11 @@ import {
 
 const PB_KEY = "memory-personal-bests";
 const PRINT_CREDIT = "myzoyna.com";
-const MISMATCH_PAUSE_MS = 1000;
+const MISMATCH_HOLD_MS = 650;
+const FLIP_CLOSE_MS = 150;
+const FLIP_OPEN_MS = 220;
+const FADE_OUT_MS = 180;
+const FADE_IN_MS = 200;
 
 export const MEMORY_DIFFICULTY = {
   easy: { rows: 2, cols: 2, pairs: 2 },
@@ -106,6 +110,7 @@ export class MemoryApp {
     this.focusIndex = 0;
     this._stopCelebrate = null;
     this._mismatchTimer = 0;
+    this._dealTimer = 0;
     this.els = {};
     this.timer = new GameTimer((ms) => this._updateTimerDisplay(ms));
   }
@@ -264,6 +269,7 @@ export class MemoryApp {
     this._stopCelebrate = null;
     hideCelebrationOverlay(this.els.celebrate);
     clearTimeout(this._mismatchTimer);
+    clearTimeout(this._dealTimer);
     this.timer.reset();
     this.flipped = [];
     this.matched = new Set();
@@ -277,6 +283,7 @@ export class MemoryApp {
     this._updateBest();
     this._updateStatus();
     this._render();
+    this._playDealAnimation();
     if (sync) this._syncUrl();
   }
 
@@ -362,6 +369,46 @@ export class MemoryApp {
     this._syncCardDom();
   }
 
+  /**
+   * Soft staggered jitter after New Game / Restart / first deal so the board
+   * visibly "refreshes" even when every card still shows the same green back.
+   */
+  _playDealAnimation() {
+    const stage = this.els.stage;
+    if (!stage) return;
+    const cards = [...stage.querySelectorAll(".memory-card")];
+    if (!cards.length) return;
+
+    const reduced =
+      typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+    this._announce("New cards ready");
+    if (this.els.status) this.els.status.textContent = "Cards shuffled!";
+
+    if (reduced) {
+      this._dealTimer = setTimeout(() => this._updateStatus(), 700);
+      return;
+    }
+
+    this.lock = true;
+    stage.classList.add("is-dealing");
+    cards.forEach((btn, i) => {
+      btn.classList.add("is-dealing");
+      btn.style.setProperty("--deal-delay", `${Math.min(i * 30, 360)}ms`);
+    });
+
+    const settleMs = 420 + Math.min(cards.length * 30, 360);
+    clearTimeout(this._dealTimer);
+    this._dealTimer = setTimeout(() => {
+      cards.forEach((btn) => {
+        btn.classList.remove("is-dealing");
+        btn.style.removeProperty("--deal-delay");
+      });
+      stage.classList.remove("is-dealing");
+      this.lock = false;
+      this._updateStatus();
+    }, settleMs);
+  }
+
   /** Update face-up / matched classes without rebuilding the grid (keeps flips visible). */
   _syncCardDom() {
     const stage = this.els.stage;
@@ -372,32 +419,11 @@ export class MemoryApp {
       if (!card) return;
       const isMatched = this.matched.has(card.pairId);
       const isFlipped = isMatched || this.flipped.includes(index);
-      const faceEl = btn.querySelector(".memory-face");
-      const isGlyph = Array.from(card.face).length === 1 && /[A-Za-z0-9]/.test(card.face);
-
       btn.classList.toggle("is-flipped", isFlipped);
       btn.classList.toggle("is-matched", isMatched);
       btn.classList.toggle("is-focus", this.focusIndex === index);
-      btn.disabled = isMatched || this.completed;
-
-      if (faceEl) {
-        if (isFlipped) {
-          faceEl.className = `memory-face memory-face--${isGlyph ? "glyph" : "emoji"}`;
-          faceEl.textContent = card.face;
-        } else {
-          // Face-down: only ? + Tap  -  answer emoji must not exist in the DOM
-          faceEl.className = "memory-face memory-face--back";
-          faceEl.replaceChildren();
-          const q = document.createElement("span");
-          q.className = "memory-card-q";
-          q.textContent = "?";
-          const hint = document.createElement("span");
-          hint.className = "memory-card-hint";
-          hint.textContent = "Tap";
-          faceEl.append(q, hint);
-        }
-      }
-
+      btn.disabled = isMatched || this.completed || btn.classList.contains("is-animating");
+      this._paintCardFace(btn, isFlipped, card);
       btn.setAttribute(
         "aria-label",
         isFlipped
@@ -405,6 +431,85 @@ export class MemoryApp {
           : `Card ${index + 1} of ${this.deck.cards.length}, face down: tap to flip`
       );
     });
+  }
+
+  _paintCardFace(btn, isFlipped, card) {
+    const faceEl = btn.querySelector(".memory-face");
+    if (!faceEl || !card) return;
+    const isGlyph = Array.from(card.face).length === 1 && /[A-Za-z0-9]/.test(card.face);
+    if (isFlipped) {
+      faceEl.className = `memory-face memory-face--${isGlyph ? "glyph" : "emoji"}`;
+      faceEl.textContent = card.face;
+    } else {
+      faceEl.className = "memory-face memory-face--back";
+      faceEl.replaceChildren();
+      const q = document.createElement("span");
+      q.className = "memory-card-q";
+      q.textContent = "?";
+      const hint = document.createElement("span");
+      hint.className = "memory-card-hint";
+      hint.textContent = "Tap";
+      faceEl.append(q, hint);
+    }
+  }
+
+  _prefersReducedMotion() {
+    return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  }
+
+  _wait(ms) {
+    return new Promise((resolve) => {
+      setTimeout(resolve, ms);
+    });
+  }
+
+  _cardButton(index) {
+    return this.els.stage?.querySelector(`.memory-card[data-index="${index}"]`);
+  }
+
+  /** Flip-open reveal: squeeze shut, swap face, open to the picture. */
+  async _animateReveal(index) {
+    const btn = this._cardButton(index);
+    const card = this.deck?.cards[index];
+    if (!btn || !card) return;
+    if (this._prefersReducedMotion()) {
+      btn.classList.add("is-flipped");
+      this._paintCardFace(btn, true, card);
+      return;
+    }
+    btn.classList.add("is-animating");
+    btn.disabled = true;
+    btn.classList.add("is-flip-close");
+    await this._wait(FLIP_CLOSE_MS);
+    btn.classList.remove("is-flip-close");
+    btn.classList.add("is-flipped");
+    this._paintCardFace(btn, true, card);
+    btn.classList.add("is-flip-open");
+    await this._wait(FLIP_OPEN_MS);
+    btn.classList.remove("is-flip-open", "is-animating");
+    btn.disabled = this.matched.has(card.pairId) || this.completed;
+  }
+
+  /** Soft hide: fade out picture, restore back, fade in. */
+  async _animateHide(index) {
+    const btn = this._cardButton(index);
+    const card = this.deck?.cards[index];
+    if (!btn || !card) return;
+    if (this._prefersReducedMotion()) {
+      btn.classList.remove("is-flipped");
+      this._paintCardFace(btn, false, card);
+      return;
+    }
+    btn.classList.add("is-animating");
+    btn.disabled = true;
+    btn.classList.add("is-fade-out");
+    await this._wait(FADE_OUT_MS);
+    btn.classList.remove("is-fade-out", "is-flipped");
+    this._paintCardFace(btn, false, card);
+    btn.classList.add("is-fade-in");
+    await this._wait(FADE_IN_MS);
+    btn.classList.remove("is-fade-in", "is-animating");
+    btn.disabled = this.completed;
   }
 
   _onKey(e) {
@@ -427,7 +532,7 @@ export class MemoryApp {
     this.els.stage?.querySelector(`[data-index="${next}"]`)?.focus();
   }
 
-  _flip(index) {
+  async _flip(index) {
     if (this.lock || this.completed || !this.deck) return;
     if (this.matched.has(this.deck.cards[index].pairId)) return;
     if (this.flipped.includes(index)) return;
@@ -440,14 +545,17 @@ export class MemoryApp {
     this.flipped.push(index);
     this.focusIndex = index;
     playPop();
-    this._syncCardDom();
+    this.lock = true;
+    await this._animateReveal(index);
     this._updateStatus();
 
-    if (this.flipped.length < 2) return;
+    if (this.flipped.length < 2) {
+      this.lock = false;
+      return;
+    }
 
     this.flips += 1;
     this._updateFlips();
-    this.lock = true;
     const [a, b] = this.flipped;
     const cardA = this.deck.cards[a];
     const cardB = this.deck.cards[b];
@@ -464,12 +572,12 @@ export class MemoryApp {
       if (this.matched.size >= this.deck.pairs) this._onComplete();
     } else {
       playBonk();
-      this._mismatchTimer = setTimeout(() => {
-        this.flipped = [];
-        this.lock = false;
-        this._syncCardDom();
-        this._updateStatus();
-      }, MISMATCH_PAUSE_MS);
+      await this._wait(MISMATCH_HOLD_MS);
+      await Promise.all([this._animateHide(a), this._animateHide(b)]);
+      this.flipped = [];
+      this.lock = false;
+      this._updateStatus();
+      this._syncCardDom();
     }
   }
 
