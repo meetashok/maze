@@ -271,13 +271,23 @@
   fill: var(--coral-deep);
 }
 
+.trace-stroke-num.current {
+  fill: #1fa855;
+}
+
 .trace-arrow {
   fill: var(--coral);
   opacity: 0.85;
 }
 
+.trace-arrow.current {
+  fill: #2ecc71;
+  opacity: 1;
+  filter: drop-shadow(0 0 1px rgba(46, 204, 113, 0.75));
+}
+
 .trace-start {
-  fill: var(--path);
+  fill: #2ecc71;
   stroke: var(--floor);
   stroke-width: 0.5;
 }

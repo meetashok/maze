@@ -818,6 +818,10 @@ export class TraceApp {
 
     const guides = document.createElementNS("http://www.w3.org/2000/svg", "g");
     guides.setAttribute("class", "trace-guides");
+
+    // Precompute start points so print numbers can fan out when strokes share a start.
+    const startsNorm = item.paths.map((path) => (path[0] ? { x: path[0].x, y: path[0].y } : null));
+
     item.paths.forEach((path, i) => {
       const done = interactive && i < this.strokeIndex;
       const active = interactive && i === this.strokeIndex && !this.completed;
@@ -832,22 +836,31 @@ export class TraceApp {
       guides.appendChild(p);
 
       if (options.showStrokeNumbers && path[0]) {
-        const num = document.createElementNS("http://www.w3.org/2000/svg", "text");
-        num.setAttribute("x", tx(path[0].x) - 3.5);
-        num.setAttribute("y", ty(path[0].y) - 3.5);
-        num.setAttribute("class", "trace-stroke-num");
-        num.textContent = String(i + 1);
-        guides.appendChild(num);
+        // Interactive: only the current stroke number (avoids 1/2 stacking on shared starts).
+        // Print: show all, but nudge labels that share a start point.
+        const showNum = !interactive || active;
+        if (showNum) {
+          const stack = startsNorm[i]
+            ? startsNorm.slice(0, i).filter((s) => s && dist(s, startsNorm[i]) < 0.05).length
+            : 0;
+          const num = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          num.setAttribute("x", tx(path[0].x) - 3.5 - stack * 3.2);
+          num.setAttribute("y", ty(path[0].y) - 3.5 - stack * 2.4);
+          num.setAttribute("class", `trace-stroke-num${active ? " current" : ""}`);
+          num.textContent = String(i + 1);
+          guides.appendChild(num);
+        }
       }
 
-      if (options.showArrows) {
+      if (options.showArrows && (!interactive || active)) {
+        // While playing, only the active stroke arrow (green); print keeps all.
         const arrow = directionArrow(path, tx, ty);
         if (arrow) {
           const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
           g.setAttribute("transform", `translate(${arrow.x} ${arrow.y}) rotate(${arrow.angle})`);
           const tri = document.createElementNS("http://www.w3.org/2000/svg", "path");
           tri.setAttribute("d", "M 0 0 L -3.2 -2.2 L -3.2 2.2 Z");
-          tri.setAttribute("class", "trace-arrow");
+          tri.setAttribute("class", active ? "trace-arrow current" : "trace-arrow");
           g.appendChild(tri);
           guides.appendChild(g);
         }
@@ -877,15 +890,23 @@ export class TraceApp {
     starts.setAttribute("class", "trace-starts");
     item.paths.forEach((path, i) => {
       if (!path[0]) return;
-      if (interactive && (i < this.strokeIndex || this.completed)) return;
+      if (interactive) {
+        // Only the live start dot — always green. Drawing future starts on top
+        // of a shared point was covering the green current with orange.
+        if (i !== this.strokeIndex || this.completed) return;
+        const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        c.setAttribute("cx", tx(path[0].x));
+        c.setAttribute("cy", ty(path[0].y));
+        c.setAttribute("r", 2.4);
+        c.setAttribute("class", "trace-start current");
+        starts.appendChild(c);
+        return;
+      }
       const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
       c.setAttribute("cx", tx(path[0].x));
       c.setAttribute("cy", ty(path[0].y));
-      c.setAttribute("r", interactive && i === this.strokeIndex ? 2.4 : 1.8);
-      c.setAttribute(
-        "class",
-        `trace-start${interactive && i === this.strokeIndex ? " current" : ""}`
-      );
+      c.setAttribute("r", 1.8);
+      c.setAttribute("class", "trace-start");
       starts.appendChild(c);
     });
     svg.appendChild(starts);
