@@ -17,8 +17,11 @@ import {
 
 const TOTAL_ROUNDS = 5;
 const ANSWER_PAUSE_MS = 900;
+const REVEAL_PAUSE_MS = 1400;
 const DEAL_MS = 480;
+const MAX_WRONG_TRIES = 3;
 
+/** High-contrast colors and shapes only — no animals (easier to misread). */
 const COLORS = [
   { emoji: "🔴", name: "red" },
   { emoji: "🔵", name: "blue" },
@@ -31,17 +34,9 @@ const SHAPES = [
   { emoji: "⭐", name: "star" },
   { emoji: "❤️", name: "heart" },
   { emoji: "🔺", name: "triangle" },
-  { emoji: "🟦", name: "square" },
-  { emoji: "⬜", name: "white square" },
+  { emoji: "🟦", name: "blue square" },
   { emoji: "⬛", name: "black square" },
-];
-const ANIMALS = [
-  { emoji: "🐶", name: "dog" },
-  { emoji: "🐱", name: "cat" },
-  { emoji: "🐸", name: "frog" },
-  { emoji: "🦊", name: "fox" },
-  { emoji: "🐻", name: "bear" },
-  { emoji: "🐼", name: "panda" },
+  { emoji: "💎", name: "gem" },
 ];
 
 /** @type {Record<string, { types: string[], unitsShown: number }>} */
@@ -78,7 +73,7 @@ function buildChoices(answer, distractors, rand) {
   for (const d of [answer, ...distractors]) {
     if (d && !unique.includes(d)) unique.push(d);
   }
-  const pool = [...COLORS, ...SHAPES, ...ANIMALS].map((x) => x.emoji);
+  const pool = [...COLORS, ...SHAPES].map((x) => x.emoji);
   while (unique.length < 3) {
     const extra = pick(pool, rand);
     if (!unique.includes(extra)) unique.push(extra);
@@ -102,6 +97,7 @@ function makeFromUnit(type, unitItems, unitsShown, rand) {
   return {
     type,
     unit,
+    unitLen: unit.length,
     prompt,
     answer,
     ruleLabel: type,
@@ -117,13 +113,13 @@ function makeAB(rand, unitsShown) {
 }
 
 function makeAAB(rand, unitsShown) {
-  const pool = pick([COLORS, SHAPES, ANIMALS], rand);
+  const pool = pick([COLORS, SHAPES], rand);
   const [a, b] = pickDistinct(pool, 2, rand);
   return makeFromUnit("AAB", [a, a, b], unitsShown, rand);
 }
 
 function makeABB(rand, unitsShown) {
-  const pool = pick([COLORS, SHAPES, ANIMALS], rand);
+  const pool = pick([COLORS, SHAPES], rand);
   const [a, b] = pickDistinct(pool, 2, rand);
   return makeFromUnit("ABB", [a, b, b], unitsShown, rand);
 }
@@ -140,19 +136,25 @@ function makeAABB(rand, unitsShown) {
   return makeFromUnit("AABB", [a, a, b, b], unitsShown, rand);
 }
 
-/** Growing count of one emoji — each cell is a clearer count label + emoji. */
+/**
+ * Growing nest: A | A B | A B C — next is A (start of the next, longer group).
+ * Separators between groups make the growth obvious.
+ */
 function makeGrow(rand) {
-  const item = pick(COLORS, rand);
-  const prompt = [1, 2, 3].map((n) => item.emoji.repeat(n));
-  const answer = item.emoji.repeat(4);
+  const pool = pick([COLORS, SHAPES], rand);
+  const [a, b, c] = pickDistinct(pool, 3, rand);
+  const prompt = [a.emoji, a.emoji, b.emoji, a.emoji, b.emoji, c.emoji];
+  const answer = a.emoji;
   return {
     type: "grow",
-    unit: [item.emoji],
+    unit: [a.emoji, b.emoji, c.emoji],
+    unitLen: 0,
+    groupSizes: [1, 2, 3],
     prompt,
     answer,
     ruleLabel: "grow",
-    hint: `It grows by one ${item.name} each time`,
-    ...buildChoices(answer, [item.emoji.repeat(5), item.emoji.repeat(2), item.emoji], rand),
+    hint: `It grows: ${a.name}, then ${a.name} ${b.name}, then ${a.name} ${b.name} ${c.name}…`,
+    ...buildChoices(answer, [b.emoji, c.emoji], rand),
   };
 }
 
@@ -191,9 +193,9 @@ export class PatternApp {
     this.difficulty = "easy";
     this.sessionSeed = 1;
     this.roundIndex = 0;
-    this.score = 0;
     this.round = null;
     this.lock = false;
+    this.wrongTries = 0;
     this.completed = false;
     this.usedKeys = [];
     this._stopCelebrate = null;
@@ -273,8 +275,8 @@ export class PatternApp {
     clearTimeout(this._dealTimer);
     this.sessionSeed = seed >>> 0 || 1;
     this.roundIndex = 0;
-    this.score = 0;
     this.lock = false;
+    this.wrongTries = 0;
     this.completed = false;
     this.usedKeys = [];
     this._loadRound({ sync });
@@ -286,6 +288,7 @@ export class PatternApp {
     });
     if (this.round.key) this.usedKeys.push(this.round.key);
     this.lock = false;
+    this.wrongTries = 0;
     this._updateScore();
     this._updateStatus();
     this._render();
@@ -295,7 +298,7 @@ export class PatternApp {
 
   _updateScore() {
     if (this.els.score) {
-      this.els.score.textContent = `Round ${Math.min(this.roundIndex + 1, TOTAL_ROUNDS)} of ${TOTAL_ROUNDS} · Score ${this.score}`;
+      this.els.score.textContent = `Puzzle ${Math.min(this.roundIndex + 1, TOTAL_ROUNDS)} of ${TOTAL_ROUNDS}`;
     }
   }
 
@@ -309,8 +312,7 @@ export class PatternApp {
       this.els.status.textContent = "You finished all the patterns!";
       return;
     }
-    const hint = this.round?.hint ? ` ${this.round.hint}` : "";
-    this.els.status.textContent = `What comes next?${hint}`;
+    this.els.status.textContent = "What comes next in the pattern?";
   }
 
   _playDeal() {
@@ -337,19 +339,44 @@ export class PatternApp {
     stage.innerHTML = "";
     stage.setAttribute("role", "list");
     stage.setAttribute("aria-label", "Pattern sequence");
-    for (const item of this.round.prompt) {
+
+    const appendSep = (extraClass = "") => {
+      const sep = document.createElement("span");
+      sep.className = `pattern-unit-sep${extraClass ? ` ${extraClass}` : ""}`;
+      sep.setAttribute("aria-hidden", "true");
+      stage.appendChild(sep);
+    };
+
+    const appendCell = (text, className = "pattern-item") => {
       const cell = document.createElement("span");
-      cell.className = "pattern-item";
+      cell.className = className;
       cell.setAttribute("role", "listitem");
-      cell.textContent = item;
+      cell.textContent = text;
       stage.appendChild(cell);
+      return cell;
+    };
+
+    const groupSizes = this.round.groupSizes;
+    if (groupSizes) {
+      let idx = 0;
+      groupSizes.forEach((size, gi) => {
+        if (gi > 0) appendSep();
+        for (let i = 0; i < size; i += 1) {
+          appendCell(this.round.prompt[idx]);
+          idx += 1;
+        }
+      });
+    } else {
+      const unitLen = this.round.unitLen || this.round.unit?.length || 2;
+      this.round.prompt.forEach((item, i) => {
+        if (i > 0 && i % unitLen === 0) appendSep();
+        appendCell(item);
+      });
     }
-    const blank = document.createElement("span");
-    blank.className = "pattern-item pattern-item--blank";
-    blank.setAttribute("role", "listitem");
+
+    appendSep("pattern-ask-sep");
+    const blank = appendCell("?", "pattern-item pattern-item--blank");
     blank.setAttribute("aria-label", "Blank: what comes next?");
-    blank.textContent = "?";
-    stage.appendChild(blank);
 
     choicesHost.innerHTML = "";
     choicesHost.setAttribute("role", "group");
@@ -368,30 +395,54 @@ export class PatternApp {
 
   _choose(index) {
     if (this.lock || this.completed || !this.round) return;
-    this.lock = true;
+    const btn = this.els.choices?.querySelector(`.pattern-choice[data-index="${index}"]`);
+    if (!btn || btn.disabled) return;
+
     const correct = index === this.round.correctIndex;
+
+    if (correct) {
+      this.lock = true;
+      this._markResolved(index, true);
+      playPop();
+      this._updateStatus(`Yes! ${this.round.hint || "That's the pattern."}`);
+      clearTimeout(this._answerTimer);
+      this._answerTimer = setTimeout(() => this._nextAfterAnswer(), ANSWER_PAUSE_MS);
+      return;
+    }
+
+    this.wrongTries += 1;
+    playBonk();
+    btn.disabled = true;
+    btn.classList.add("is-wrong", "is-shake");
+    setTimeout(() => btn.classList.remove("is-shake"), 320);
+
+    if (this.wrongTries >= MAX_WRONG_TRIES) {
+      this.lock = true;
+      this._markResolved(this.round.correctIndex, false);
+      this._updateStatus(`This one! ${this.round.hint || ""}`.trim());
+      clearTimeout(this._answerTimer);
+      this._answerTimer = setTimeout(() => this._nextAfterAnswer(), REVEAL_PAUSE_MS);
+      return;
+    }
+
+    const left = MAX_WRONG_TRIES - this.wrongTries;
+    this._updateStatus(
+      left === 1 ? "Not that one — one more try!" : "Not that one — try another!"
+    );
+  }
+
+  _markResolved(selectedIndex, wasCorrect) {
     this.els.choices?.querySelectorAll(".pattern-choice").forEach((btn, i) => {
       btn.disabled = true;
       if (i === this.round.correctIndex) btn.classList.add("is-correct");
-      if (i === index && !correct) btn.classList.add("is-wrong");
-      if (i === index) btn.classList.add("is-selected");
+      if (i === selectedIndex) btn.classList.add("is-selected");
+      if (i !== this.round.correctIndex) btn.classList.add("is-dim");
     });
     const blank = this.els.stage?.querySelector(".pattern-item--blank");
     if (blank) {
       blank.textContent = this.round.answer;
-      blank.classList.add(correct ? "is-correct" : "is-reveal");
+      blank.classList.add(wasCorrect ? "is-correct" : "is-reveal");
     }
-    if (correct) {
-      this.score += 1;
-      playPop();
-      this._updateScore();
-      this._updateStatus(`Yes! ${this.round.hint || "That's the pattern."}`);
-    } else {
-      playBonk();
-      this._updateStatus(`It was ${this.round.answer}. ${this.round.hint || ""}`);
-    }
-    clearTimeout(this._answerTimer);
-    this._answerTimer = setTimeout(() => this._nextAfterAnswer(), ANSWER_PAUSE_MS);
   }
 
   _nextAfterAnswer() {
@@ -410,7 +461,7 @@ export class PatternApp {
     showCelebrationOverlay(this.els.celebrate, {
       emoji: "🔁",
       message: "Pattern master!",
-      detail: `Score: ${this.score}/${TOTAL_ROUNDS} · ${this.difficulty}`,
+      detail: `You finished ${TOTAL_ROUNDS} puzzles!`,
       againLabel: "Play Again",
       newLabel: "New Patterns",
       onAgain: () => this._restart(),
