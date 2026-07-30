@@ -1,5 +1,5 @@
 /* Puzzle Play service worker — network-first so deploys aren't stuck behind cache. */
-const CACHE = "puzzle-play-v16";
+const CACHE = "puzzle-play-v17";
 const ASSETS = [
   "./",
   "./index.html",
@@ -8,6 +8,8 @@ const ASSETS = [
   "./css/trace.css",
   "./css/memory.css",
   "./css/search.css",
+  "./css/pattern.css",
+  "./css/odd.css",
   "./js/hub.js",
   "./js/common.js",
   "./js/confetti.js",
@@ -26,6 +28,8 @@ const ASSETS = [
   "./js/memory-themes.json",
   "./js/search.js",
   "./js/search-words.json",
+  "./js/pattern.js",
+  "./js/odd.js",
   "./manifest.json",
   "./assets/favicon.svg",
   "./assets/logo-mark.svg",

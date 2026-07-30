@@ -5,18 +5,66 @@
       "name": "Animals",
       "emoji": "🐾",
       "items": [
-        { "id": "dog", "label": "dog", "face": "🐶" },
-        { "id": "cat", "label": "cat", "face": "🐱" },
-        { "id": "frog", "label": "frog", "face": "🐸" },
-        { "id": "butterfly", "label": "butterfly", "face": "🦋" },
-        { "id": "turtle", "label": "turtle", "face": "🐢" },
-        { "id": "elephant", "label": "elephant", "face": "🐘" },
-        { "id": "lion", "label": "lion", "face": "🦁" },
-        { "id": "bear", "label": "bear", "face": "🐻" },
-        { "id": "rabbit", "label": "rabbit", "face": "🐰" },
-        { "id": "panda", "label": "panda", "face": "🐼" },
-        { "id": "fox", "label": "fox", "face": "🦊" },
-        { "id": "penguin", "label": "penguin", "face": "🐧" }
+        {
+          "id": "dog",
+          "label": "dog",
+          "face": "🐶"
+        },
+        {
+          "id": "cat",
+          "label": "cat",
+          "face": "🐱"
+        },
+        {
+          "id": "frog",
+          "label": "frog",
+          "face": "🐸"
+        },
+        {
+          "id": "butterfly",
+          "label": "butterfly",
+          "face": "🦋"
+        },
+        {
+          "id": "turtle",
+          "label": "turtle",
+          "face": "🐢"
+        },
+        {
+          "id": "elephant",
+          "label": "elephant",
+          "face": "🐘"
+        },
+        {
+          "id": "lion",
+          "label": "lion",
+          "face": "🦁"
+        },
+        {
+          "id": "bear",
+          "label": "bear",
+          "face": "🐻"
+        },
+        {
+          "id": "rabbit",
+          "label": "rabbit",
+          "face": "🐰"
+        },
+        {
+          "id": "panda",
+          "label": "panda",
+          "face": "🐼"
+        },
+        {
+          "id": "fox",
+          "label": "fox",
+          "face": "🦊"
+        },
+        {
+          "id": "penguin",
+          "label": "penguin",
+          "face": "🐧"
+        }
       ]
     },
     {
@@ -24,18 +72,66 @@
       "name": "Food",
       "emoji": "🍎",
       "items": [
-        { "id": "apple", "label": "apple", "face": "🍎" },
-        { "id": "banana", "label": "banana", "face": "🍌" },
-        { "id": "pizza", "label": "pizza", "face": "🍕" },
-        { "id": "donut", "label": "donut", "face": "🍩" },
-        { "id": "cupcake", "label": "cupcake", "face": "🧁" },
-        { "id": "cookie", "label": "cookie", "face": "🍪" },
-        { "id": "taco", "label": "taco", "face": "🌮" },
-        { "id": "strawberry", "label": "strawberry", "face": "🍓" },
-        { "id": "carrot", "label": "carrot", "face": "🥕" },
-        { "id": "watermelon", "label": "watermelon", "face": "🍉" },
-        { "id": "grapes", "label": "grapes", "face": "🍇" },
-        { "id": "cheese", "label": "cheese", "face": "🧀" }
+        {
+          "id": "apple",
+          "label": "apple",
+          "face": "🍎"
+        },
+        {
+          "id": "banana",
+          "label": "banana",
+          "face": "🍌"
+        },
+        {
+          "id": "pizza",
+          "label": "pizza",
+          "face": "🍕"
+        },
+        {
+          "id": "donut",
+          "label": "donut",
+          "face": "🍩"
+        },
+        {
+          "id": "cupcake",
+          "label": "cupcake",
+          "face": "🧁"
+        },
+        {
+          "id": "cookie",
+          "label": "cookie",
+          "face": "🍪"
+        },
+        {
+          "id": "taco",
+          "label": "taco",
+          "face": "🌮"
+        },
+        {
+          "id": "strawberry",
+          "label": "strawberry",
+          "face": "🍓"
+        },
+        {
+          "id": "carrot",
+          "label": "carrot",
+          "face": "🥕"
+        },
+        {
+          "id": "watermelon",
+          "label": "watermelon",
+          "face": "🍉"
+        },
+        {
+          "id": "grapes",
+          "label": "grapes",
+          "face": "🍇"
+        },
+        {
+          "id": "cheese",
+          "label": "cheese",
+          "face": "🧀"
+        }
       ]
     },
     {
@@ -43,18 +139,66 @@
       "name": "Vehicles",
       "emoji": "🚗",
       "items": [
-        { "id": "car", "label": "car", "face": "🚗" },
-        { "id": "rocket", "label": "rocket", "face": "🚀" },
-        { "id": "helicopter", "label": "helicopter", "face": "🚁" },
-        { "id": "train", "label": "train", "face": "🚂" },
-        { "id": "ship", "label": "ship", "face": "🚢" },
-        { "id": "plane", "label": "plane", "face": "✈️" },
-        { "id": "race", "label": "race car", "face": "🏎️" },
-        { "id": "bike", "label": "bike", "face": "🚲" },
-        { "id": "ufo", "label": "UFO", "face": "🛸" },
-        { "id": "tractor", "label": "tractor", "face": "🚜" },
-        { "id": "firetruck", "label": "fire truck", "face": "🚒" },
-        { "id": "ambulance", "label": "ambulance", "face": "🚑" }
+        {
+          "id": "car",
+          "label": "car",
+          "face": "🚗"
+        },
+        {
+          "id": "rocket",
+          "label": "rocket",
+          "face": "🚀"
+        },
+        {
+          "id": "helicopter",
+          "label": "helicopter",
+          "face": "🚁"
+        },
+        {
+          "id": "train",
+          "label": "train",
+          "face": "🚂"
+        },
+        {
+          "id": "ship",
+          "label": "ship",
+          "face": "🚢"
+        },
+        {
+          "id": "plane",
+          "label": "plane",
+          "face": "✈️"
+        },
+        {
+          "id": "race",
+          "label": "race car",
+          "face": "🏎️"
+        },
+        {
+          "id": "bike",
+          "label": "bike",
+          "face": "🚲"
+        },
+        {
+          "id": "ufo",
+          "label": "UFO",
+          "face": "🛸"
+        },
+        {
+          "id": "tractor",
+          "label": "tractor",
+          "face": "🚜"
+        },
+        {
+          "id": "firetruck",
+          "label": "fire truck",
+          "face": "🚒"
+        },
+        {
+          "id": "ambulance",
+          "label": "ambulance",
+          "face": "🚑"
+        }
       ]
     },
     {
@@ -62,18 +206,66 @@
       "name": "Colors",
       "emoji": "🌈",
       "items": [
-        { "id": "red", "label": "red", "face": "🔴" },
-        { "id": "blue", "label": "blue", "face": "🔵" },
-        { "id": "green", "label": "green", "face": "🟢" },
-        { "id": "yellow", "label": "yellow", "face": "🟡" },
-        { "id": "purple", "label": "purple", "face": "🟣" },
-        { "id": "orange", "label": "orange", "face": "🟠" },
-        { "id": "star", "label": "star", "face": "⭐" },
-        { "id": "heart-purple", "label": "purple heart", "face": "💜" },
-        { "id": "heart-pink", "label": "pink heart", "face": "🩷" },
-        { "id": "heart-blue", "label": "blue heart", "face": "🩵" },
-        { "id": "heart-brown", "label": "brown heart", "face": "🤎" },
-        { "id": "heart-black", "label": "black heart", "face": "🖤" }
+        {
+          "id": "red",
+          "label": "red",
+          "face": "🔴"
+        },
+        {
+          "id": "blue",
+          "label": "blue",
+          "face": "🔵"
+        },
+        {
+          "id": "green",
+          "label": "green",
+          "face": "🟢"
+        },
+        {
+          "id": "yellow",
+          "label": "yellow",
+          "face": "🟡"
+        },
+        {
+          "id": "purple",
+          "label": "purple",
+          "face": "🟣"
+        },
+        {
+          "id": "orange",
+          "label": "orange",
+          "face": "🟠"
+        },
+        {
+          "id": "star",
+          "label": "star",
+          "face": "⭐"
+        },
+        {
+          "id": "heart-purple",
+          "label": "purple heart",
+          "face": "💜"
+        },
+        {
+          "id": "heart-pink",
+          "label": "pink heart",
+          "face": "🩷"
+        },
+        {
+          "id": "heart-blue",
+          "label": "blue heart",
+          "face": "🩵"
+        },
+        {
+          "id": "heart-brown",
+          "label": "brown heart",
+          "face": "🤎"
+        },
+        {
+          "id": "heart-black",
+          "label": "black heart",
+          "face": "🖤"
+        }
       ]
     },
     {
@@ -81,18 +273,66 @@
       "name": "Letters",
       "emoji": "🔤",
       "items": [
-        { "id": "A", "label": "letter A", "face": "A" },
-        { "id": "B", "label": "letter B", "face": "B" },
-        { "id": "C", "label": "letter C", "face": "C" },
-        { "id": "D", "label": "letter D", "face": "D" },
-        { "id": "E", "label": "letter E", "face": "E" },
-        { "id": "F", "label": "letter F", "face": "F" },
-        { "id": "G", "label": "letter G", "face": "G" },
-        { "id": "H", "label": "letter H", "face": "H" },
-        { "id": "I", "label": "letter I", "face": "I" },
-        { "id": "J", "label": "letter J", "face": "J" },
-        { "id": "K", "label": "letter K", "face": "K" },
-        { "id": "L", "label": "letter L", "face": "L" }
+        {
+          "id": "A",
+          "label": "letter A",
+          "face": "A"
+        },
+        {
+          "id": "B",
+          "label": "letter B",
+          "face": "B"
+        },
+        {
+          "id": "C",
+          "label": "letter C",
+          "face": "C"
+        },
+        {
+          "id": "D",
+          "label": "letter D",
+          "face": "D"
+        },
+        {
+          "id": "E",
+          "label": "letter E",
+          "face": "E"
+        },
+        {
+          "id": "F",
+          "label": "letter F",
+          "face": "F"
+        },
+        {
+          "id": "G",
+          "label": "letter G",
+          "face": "G"
+        },
+        {
+          "id": "H",
+          "label": "letter H",
+          "face": "H"
+        },
+        {
+          "id": "I",
+          "label": "letter I",
+          "face": "I"
+        },
+        {
+          "id": "J",
+          "label": "letter J",
+          "face": "J"
+        },
+        {
+          "id": "K",
+          "label": "letter K",
+          "face": "K"
+        },
+        {
+          "id": "L",
+          "label": "letter L",
+          "face": "L"
+        }
       ]
     },
     {
@@ -100,16 +340,190 @@
       "name": "Numbers",
       "emoji": "🔢",
       "items": [
-        { "id": "1", "label": "number 1", "face": "1" },
-        { "id": "2", "label": "number 2", "face": "2" },
-        { "id": "3", "label": "number 3", "face": "3" },
-        { "id": "4", "label": "number 4", "face": "4" },
-        { "id": "5", "label": "number 5", "face": "5" },
-        { "id": "6", "label": "number 6", "face": "6" },
-        { "id": "7", "label": "number 7", "face": "7" },
-        { "id": "8", "label": "number 8", "face": "8" },
-        { "id": "9", "label": "number 9", "face": "9" },
-        { "id": "0", "label": "number 0", "face": "0" }
+        {
+          "id": "1",
+          "label": "number 1",
+          "face": "1"
+        },
+        {
+          "id": "2",
+          "label": "number 2",
+          "face": "2"
+        },
+        {
+          "id": "3",
+          "label": "number 3",
+          "face": "3"
+        },
+        {
+          "id": "4",
+          "label": "number 4",
+          "face": "4"
+        },
+        {
+          "id": "5",
+          "label": "number 5",
+          "face": "5"
+        },
+        {
+          "id": "6",
+          "label": "number 6",
+          "face": "6"
+        },
+        {
+          "id": "7",
+          "label": "number 7",
+          "face": "7"
+        },
+        {
+          "id": "8",
+          "label": "number 8",
+          "face": "8"
+        },
+        {
+          "id": "9",
+          "label": "number 9",
+          "face": "9"
+        },
+        {
+          "id": "0",
+          "label": "number 0",
+          "face": "0"
+        }
+      ]
+    },
+    {
+      "id": "nature",
+      "name": "Nature",
+      "emoji": "🌿",
+      "items": [
+        {
+          "id": "tree",
+          "label": "tree",
+          "face": "🌳"
+        },
+        {
+          "id": "flower",
+          "label": "flower",
+          "face": "🌸"
+        },
+        {
+          "id": "sun",
+          "label": "sun",
+          "face": "☀️"
+        },
+        {
+          "id": "moon",
+          "label": "moon",
+          "face": "🌙"
+        },
+        {
+          "id": "cloud",
+          "label": "cloud",
+          "face": "☁️"
+        },
+        {
+          "id": "rainbow",
+          "label": "rainbow",
+          "face": "🌈"
+        },
+        {
+          "id": "leaf",
+          "label": "leaf",
+          "face": "🍃"
+        },
+        {
+          "id": "mushroom",
+          "label": "mushroom",
+          "face": "🍄"
+        },
+        {
+          "id": "cactus",
+          "label": "cactus",
+          "face": "🌵"
+        },
+        {
+          "id": "wave",
+          "label": "wave",
+          "face": "🌊"
+        },
+        {
+          "id": "snow",
+          "label": "snowflake",
+          "face": "❄️"
+        },
+        {
+          "id": "fire",
+          "label": "fire",
+          "face": "🔥"
+        }
+      ]
+    },
+    {
+      "id": "sports",
+      "name": "Sports",
+      "emoji": "⚽",
+      "items": [
+        {
+          "id": "soccer",
+          "label": "soccer",
+          "face": "⚽"
+        },
+        {
+          "id": "basketball",
+          "label": "basketball",
+          "face": "🏀"
+        },
+        {
+          "id": "tennis",
+          "label": "tennis",
+          "face": "🎾"
+        },
+        {
+          "id": "baseball",
+          "label": "baseball",
+          "face": "⚾"
+        },
+        {
+          "id": "football",
+          "label": "football",
+          "face": "🏈"
+        },
+        {
+          "id": "volleyball",
+          "label": "volleyball",
+          "face": "🏐"
+        },
+        {
+          "id": "golf",
+          "label": "golf",
+          "face": "⛳"
+        },
+        {
+          "id": "trophy",
+          "label": "trophy",
+          "face": "🏆"
+        },
+        {
+          "id": "medal",
+          "label": "medal",
+          "face": "🏅"
+        },
+        {
+          "id": "bike",
+          "label": "bike",
+          "face": "🚲"
+        },
+        {
+          "id": "swim",
+          "label": "swimmer",
+          "face": "🏊"
+        },
+        {
+          "id": "skate",
+          "label": "skate",
+          "face": "⛸️"
+        }
       ]
     }
   ]

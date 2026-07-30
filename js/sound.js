@@ -66,6 +66,12 @@ export function playBonk() {
   tone(180, { type: "square", dur: 0.09, gain: 0.06 });
 }
 
+/** Happier two-note chime for memory matches. */
+export function playMatchChime() {
+  tone(523.25, { type: "sine", dur: 0.12, gain: 0.12 });
+  tone(783.99, { type: "triangle", dur: 0.18, gain: 0.1, delay: 0.08 });
+}
+
 export function playWinSound() {
   if (muted) return;
   const notes = [523.25, 659.25, 783.99, 1046.5];

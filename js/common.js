@@ -88,6 +88,8 @@ export const GAME_PATHS = {
   trace: "trace",
   memory: "memory",
   search: "search",
+  pattern: "pattern",
+  odd: "odd",
 };
 
 /** Map URL path segments (and legacy names) → internal game id. */
@@ -102,6 +104,11 @@ export const PATH_TO_GAME = {
   search: "search",
   words: "search",
   wordsearch: "search",
+  pattern: "pattern",
+  patterns: "pattern",
+  odd: "odd",
+  "odd-one-out": "odd",
+  oddoneout: "odd",
 };
 
 /**

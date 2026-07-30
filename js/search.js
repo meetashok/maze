@@ -231,6 +231,7 @@ export class SearchApp {
     this.showAll = false;
     this.completed = false;
     this.timerEnabled = false;
+    this.picturesEnabled = true;
     this._stopCelebrate = null;
     this.els = {};
     this.timer = new GameTimer((ms) => this._updateTimerDisplay(ms));
@@ -242,6 +243,7 @@ export class SearchApp {
     this._buildCategories();
     this._bindControls();
     this.timerEnabled = !!this.els.timerToggle?.checked;
+    this.picturesEnabled = this.els.picturesToggle ? !!this.els.picturesToggle.checked : true;
     this._syncTimerVisibility();
     const { game, params } = parseGameHash();
     if (game === "search") {
@@ -266,6 +268,7 @@ export class SearchApp {
       btnPrint: $("search-btn-print"),
       timerToggle: $("search-timer-toggle"),
       timerDisplay: $("search-timer-display"),
+      picturesToggle: $("search-pictures-toggle"),
       status: $("search-status"),
       preview: $("search-preview"),
       celebrate: $("search-celebrate"),
@@ -348,6 +351,11 @@ export class SearchApp {
     this.els.timerToggle?.addEventListener("change", () => {
       this.timerEnabled = this.els.timerToggle.checked;
       this._syncTimerVisibility();
+    });
+    this.els.picturesToggle?.addEventListener("change", () => {
+      this.picturesEnabled = !!this.els.picturesToggle.checked;
+      this._render();
+      this._renderPreview();
     });
   }
 
@@ -475,8 +483,12 @@ export class SearchApp {
     const host = this.els.preview;
     if (!host || !this.puzzle) return;
     host.innerHTML = this.puzzle.words
-      .map((w) => `<span class="search-preview-item">${this._emojiForWord(w.word)} ${w.word}</span>`)
+      .map((w) => {
+        const pic = this.picturesEnabled ? `${this._emojiForWord(w.word)} ` : "";
+        return `<span class="search-preview-item">${pic}${w.word}</span>`;
+      })
       .join("");
+    host.classList.toggle("is-pictures", this.picturesEnabled);
   }
 
   _cellAtPoint(clientX, clientY) {
@@ -641,9 +653,12 @@ export class SearchApp {
     for (const w of this.puzzle.words) {
       const row = document.createElement("button");
       row.type = "button";
-      row.className = `search-word${this.found.has(w.word) ? " is-found" : ""}`;
+      row.className = `search-word${this.found.has(w.word) ? " is-found" : ""}${this.picturesEnabled ? " has-picture" : ""}`;
       row.style.setProperty("--hl", w.color);
-      row.innerHTML = `<span class="search-word-emoji">${this._emojiForWord(w.word)}</span><span class="search-word-text">${w.word}</span>${
+      const emoji = this.picturesEnabled
+        ? `<span class="search-word-emoji">${this._emojiForWord(w.word)}</span>`
+        : "";
+      row.innerHTML = `${emoji}<span class="search-word-text">${w.word}</span>${
         this.found.has(w.word) ? '<span class="search-word-check">✓</span>' : ""
       }`;
       row.addEventListener("click", () => this._hintWord(w.word));

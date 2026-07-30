@@ -119,6 +119,8 @@ export function pickDailyTraceGlyph(date = new Date()) {
   return pool[seed % pool.length];
 }
 
+export const TRACE_WORDS = ["CAT", "DOG", "SUN", "MOM", "DAD", "BUS", "HAT", "BED"];
+
 export function guideStyleForDifficulty(difficulty) {
   if (difficulty === "easy") {
     return { dash: "2.2 2.4", opacity: 0.7, showArrows: true, showStrokeNumbers: true, showLines: true };
@@ -134,6 +136,8 @@ export class TraceApp {
     this.kind = "letter";
     this.glyph = "A";
     this.letterCase = "upper";
+    this.word = null;
+    this.wordIndex = 0;
     this.item = null;
     this.difficulty = "easy";
     this.showArrows = true;
@@ -170,6 +174,8 @@ export class TraceApp {
     this.els = {
       stage: $("trace-stage"),
       status: $("trace-status"),
+      coach: $("trace-coach"),
+      wordProgress: $("trace-word-progress"),
       progress: $("trace-progress"),
       completeBanner: $("trace-complete-banner"),
       celebrate: $("trace-celebrate"),
@@ -225,8 +231,14 @@ export class TraceApp {
         this._syncKindButtons();
         this._syncCaseVisibility();
         this._buildPicker();
-        const first = this.kind === "number" ? "0" : this.letterCase === "lower" ? "a" : "A";
-        this._setGlyph(this.kind, first);
+        if (this.kind === "word") {
+          this._setWord(TRACE_WORDS[0]);
+        } else {
+          this.word = null;
+          this.wordIndex = 0;
+          const first = this.kind === "number" ? "0" : this.letterCase === "lower" ? "a" : "A";
+          this._setGlyph(this.kind, first);
+        }
       });
     });
 
@@ -272,13 +284,11 @@ export class TraceApp {
     picker.hidden = !open;
     picker.classList.toggle("is-collapsed", !open);
     toggle.setAttribute("aria-expanded", open ? "true" : "false");
-    toggle.textContent = open
-      ? this.kind === "number"
-        ? "Hide number picker"
-        : "Hide letter picker"
-      : this.kind === "number"
-        ? "Pick a number"
-        : "Pick a letter";
+    const hide =
+      this.kind === "number" ? "Hide number picker" : this.kind === "word" ? "Hide word picker" : "Hide letter picker";
+    const show =
+      this.kind === "number" ? "Pick a number" : this.kind === "word" ? "Pick a word" : "Pick a letter";
+    toggle.textContent = open ? hide : show;
   }
 
   _syncCaseVisibility() {
@@ -324,6 +334,24 @@ export class TraceApp {
     if (!root) return;
     root.innerHTML = "";
     const practiced = loadStore(TRACE_PROGRESS_KEY);
+    if (this.kind === "word") {
+      for (const word of TRACE_WORDS) {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "trace-glyph-btn";
+        btn.textContent = word;
+        btn.dataset.word = word;
+        btn.setAttribute("aria-label", `Trace the word ${word}`);
+        if (word === this.word) btn.classList.add("is-active");
+        btn.addEventListener("click", () => {
+          this.isDaily = false;
+          this._setWord(word);
+        });
+        root.appendChild(btn);
+      }
+      this._syncCaseVisibility();
+      return;
+    }
     const glyphs =
       this.kind === "number"
         ? DIGITS
@@ -351,11 +379,46 @@ export class TraceApp {
     this._syncCaseButtons();
   }
 
+  _setWord(word, { sync = true } = {}) {
+    this.kind = "word";
+    this.word = String(word || TRACE_WORDS[0]).toUpperCase();
+    this.wordIndex = 0;
+    this._syncKindButtons();
+    this._syncCaseVisibility();
+    this._setGlyph("letter", this.word[0], { sync, preserveWord: true });
+    this._updateWordProgress();
+  }
+
+  _updateWordProgress() {
+    const el = this.els.wordProgress;
+    if (!el) return;
+    if (this.kind !== "word" || !this.word) {
+      el.hidden = true;
+      el.textContent = "";
+      return;
+    }
+    el.hidden = false;
+    el.innerHTML = [...this.word]
+      .map((ch, i) => {
+        const cls = i < this.wordIndex ? "is-done" : i === this.wordIndex ? "is-current" : "";
+        return `<span class="trace-word-letter ${cls}">${ch}</span>`;
+      })
+      .join("");
+  }
+
   _progressKey(kind, glyph) {
     return `${kind}:${glyph}`;
   }
 
   _stepGlyph(dir) {
+    if (this.kind === "word") {
+      let idx = TRACE_WORDS.indexOf(this.word || TRACE_WORDS[0]);
+      if (idx < 0) idx = 0;
+      idx = (idx + dir + TRACE_WORDS.length) % TRACE_WORDS.length;
+      this.isDaily = false;
+      this._setWord(TRACE_WORDS[idx]);
+      return;
+    }
     const glyphs =
       this.kind === "number"
         ? [...DIGITS]
@@ -371,14 +434,20 @@ export class TraceApp {
 
   _syncPickerActive() {
     this.els.picker?.querySelectorAll(".trace-glyph-btn").forEach((btn) => {
-      btn.classList.toggle("is-active", btn.dataset.glyph === this.glyph);
+      if (this.kind === "word") {
+        btn.classList.toggle("is-active", btn.dataset.word === this.word);
+      } else {
+        btn.classList.toggle("is-active", btn.dataset.glyph === this.glyph);
+      }
     });
   }
 
-  _setGlyph(kind, glyph, { sync = true } = {}) {
-    const item = resolveTraceGlyph(kind, glyph, kind === "letter" ? this.letterCase : "upper");
+  _setGlyph(kind, glyph, { sync = true, preserveWord = false } = {}) {
+    const resolveKind = kind === "word" ? "letter" : kind;
+    const item = resolveTraceGlyph(resolveKind, glyph, resolveKind === "letter" ? this.letterCase : "upper");
     if (!item) return;
-    this.kind = item.kind;
+    const stayInWord = preserveWord || (this.kind === "word" && this.word);
+    this.kind = stayInWord ? "word" : item.kind;
     this.glyph = item.glyph;
     if (item.letterCase) this.letterCase = item.letterCase;
     this.item = item;
@@ -389,15 +458,22 @@ export class TraceApp {
     this._syncPickerActive();
     this._updateDailyChip();
     this._updateProgressLabel();
+    this._updateWordProgress();
     this._render();
     if (sync) this._syncUrl();
   }
 
   _pickRandom() {
+    if (this.kind === "word") {
+      const rand = mulberry32((Math.random() * 0xffffffff) >>> 0);
+      this._setWord(TRACE_WORDS[Math.floor(rand() * TRACE_WORDS.length)]);
+      return;
+    }
     const pool = listTraceGlyphs(this.kind, this.letterCase);
     const rand = mulberry32((Math.random() * 0xffffffff) >>> 0);
     const item = pool[Math.floor(rand() * pool.length)];
     if (item.letterCase) this.letterCase = item.letterCase;
+    this.word = null;
     this._setGlyph(item.kind, item.glyph);
   }
 
@@ -446,7 +522,7 @@ export class TraceApp {
   _recordPractice() {
     try {
       const store = loadStore(TRACE_PROGRESS_KEY);
-      const key = this._progressKey(this.kind, this.glyph);
+      const key = this._progressKey(this.kind === "word" ? "letter" : this.kind, this.glyph);
       const prev = store[key] || { count: 0, stars: 0 };
       const count = (prev.count || 0) + 1;
       const stars = Math.min(3, Math.max(prev.stars || 0, count >= 3 ? 3 : count));
@@ -471,10 +547,23 @@ export class TraceApp {
           : `Stroke ${this.strokeIndex + 1} of ${n}: start at the glowing dot`;
     }
     this._updateParentTips();
+    this._updateCoachBanner();
+  }
+
+  _updateCoachBanner() {
+    const el = this.els.coach;
+    if (!el) return;
+    const tip = getGlyphTip("letter", String(this.glyph).toUpperCase());
+    const step = tip?.steps?.[this.strokeIndex];
+    if (this.completed) {
+      el.textContent = tip?.coach || "";
+      return;
+    }
+    el.textContent = step ? `Stroke ${this.strokeIndex + 1}: ${step}` : tip?.coach || "";
   }
 
   _updateParentTips() {
-    const tip = getGlyphTip(this.kind, this.glyph);
+    const tip = getGlyphTip(this.kind === "number" ? "number" : "letter", this.glyph);
     const { parentGlyphLabel, parentSteps, parentCoach, parentEncourage } = this.els;
     if (!parentSteps) return;
 
@@ -668,13 +757,30 @@ export class TraceApp {
       this.els.completeBanner.textContent = `You wrote ${this.glyph}! 🎉`;
     }
     this._render();
+
+    // Word mode: advance through letters before a full celebration.
+    if (this.kind === "word" && this.word && this.wordIndex < this.word.length - 1) {
+      playPop?.();
+      this.wordIndex += 1;
+      const nextCh = this.word[this.wordIndex];
+      this._updateWordProgress();
+      setTimeout(() => {
+        this._setGlyph("letter", nextCh, { preserveWord: true });
+        if (this.els.status) this.els.status.textContent = `Nice! Now trace ${nextCh}`;
+      }, 650);
+      return;
+    }
+
+    const wordDone = this.kind === "word" && this.word;
     this._stopCelebrate = celebrate(document.body, 3200);
     showCelebrationOverlay(this.els.celebrate, {
       emoji: "✏️",
-      detail: `You wrote the ${this.kind === "number" ? "number" : "letter"} ${this.glyph}!`,
+      detail: wordDone
+        ? `You wrote ${this.word}!`
+        : `You wrote the ${this.kind === "number" ? "number" : "letter"} ${this.glyph}!`,
       againLabel: "Try Again",
-      newLabel: this.kind === "number" ? "Next Number" : "Next Letter",
-      onAgain: () => this._resetPractice(),
+      newLabel: wordDone ? "Next Word" : this.kind === "number" ? "Next Number" : "Next Letter",
+      onAgain: () => (wordDone ? this._setWord(this.word) : this._resetPractice()),
       onNew: () => this._stepGlyph(1),
     });
   }

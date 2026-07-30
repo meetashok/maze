@@ -39,6 +39,42 @@
   min-height: 1.4em;
 }
 
+.trace-coach {
+  margin: 0;
+  max-width: min(100%, 560px);
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(31, 138, 126, 0.12);
+  color: var(--teal-deep);
+  font-weight: 700;
+  text-align: center;
+  min-height: 1.4em;
+}
+
+.trace-word-progress {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.trace-word-letter {
+  opacity: 0.35;
+}
+
+.trace-word-letter.is-done {
+  opacity: 0.7;
+  color: #2f9e44;
+}
+
+.trace-word-letter.is-current {
+  opacity: 1;
+  color: var(--teal-deep);
+  transform: scale(1.15);
+}
+
 .trace-complete-banner {
   margin: 0;
   padding: 12px 16px;
