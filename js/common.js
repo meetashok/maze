@@ -299,6 +299,29 @@ export function saveStoredBest(key, field, ms) {
   return { best: ms, isNew: true };
 }
 
+/** Lifetime puzzle counters (Pattern / Odd One Out). */
+export function getLifetimeCount(key) {
+  try {
+    const n = parseInt(localStorage.getItem(key), 10);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function bumpLifetimeCount(key) {
+  const next = getLifetimeCount(key) + 1;
+  try {
+    localStorage.setItem(key, String(next));
+  } catch {
+    /* private mode / quota */
+  }
+  return next;
+}
+
+export const LIFETIME_PATTERN_KEY = "puzzle-play:lifetime:pattern";
+export const LIFETIME_ODD_KEY = "puzzle-play:lifetime:odd";
+
 export const THEME_KEY = "maze-theme";
 export const THEME_LIGHT = "light";
 export const THEME_DARK = "dark";

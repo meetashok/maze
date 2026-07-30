@@ -12,6 +12,9 @@ import {
   setGameHash,
   parseGameHash,
   copyToClipboard,
+  getLifetimeCount,
+  bumpLifetimeCount,
+  LIFETIME_ODD_KEY,
 } from "./common.js";
 
 const MILESTONE_EVERY = 5;
@@ -160,7 +163,7 @@ export class OddApp {
   constructor() {
     this.sessionSeed = 1;
     this.roundIndex = 0;
-    this.solvedCount = 0;
+    this.lifetimeCount = 0;
     this.wrongTries = 0;
     this.round = null;
     this.lock = false;
@@ -173,10 +176,10 @@ export class OddApp {
 
   async init() {
     this._cacheEls();
-    this._bindControls();
+    this.lifetimeCount = getLifetimeCount(LIFETIME_ODD_KEY);
     const { game, params } = parseGameHash();
     if (game === "odd") this.onHashChange(params);
-    else this._newGame({ sync: false });
+    else this._start({ sync: false });
   }
 
   _cacheEls() {
@@ -184,16 +187,9 @@ export class OddApp {
     this.els = {
       stage: $("odd-stage"),
       status: $("odd-status"),
-      btnNew: $("odd-btn-new"),
-      btnReset: $("odd-btn-reset"),
       celebrate: $("odd-celebrate"),
       score: $("odd-score"),
     };
-  }
-
-  _bindControls() {
-    this.els.btnNew?.addEventListener("click", () => this._newGame());
-    this.els.btnReset?.addEventListener("click", () => this._restart());
   }
 
   onHashChange(params) {
@@ -204,12 +200,8 @@ export class OddApp {
     this._setupSession(seed);
   }
 
-  _newGame({ sync = true } = {}) {
+  _start({ sync = true } = {}) {
     this._setupSession((Math.random() * 0xffffffff) >>> 0, { sync });
-  }
-
-  _restart() {
-    this._setupSession(this.sessionSeed);
   }
 
   _setupSession(seed, { sync = true } = {}) {
@@ -220,10 +212,10 @@ export class OddApp {
     clearTimeout(this._dealTimer);
     this.sessionSeed = seed >>> 0 || 1;
     this.roundIndex = 0;
-    this.solvedCount = 0;
     this.wrongTries = 0;
     this.lock = false;
     this.usedIds = [];
+    this.lifetimeCount = getLifetimeCount(LIFETIME_ODD_KEY);
     this._loadRound({ sync });
   }
 
@@ -245,9 +237,9 @@ export class OddApp {
   }
 
   _updateProgress() {
-    if (this.els.score) {
-      this.els.score.textContent = `Puzzle ${this.roundIndex + 1}`;
-    }
+    if (!this.els.score) return;
+    const n = this.lifetimeCount;
+    this.els.score.textContent = n === 1 ? "1 puzzle done" : `${n} puzzles done`;
   }
 
   _updateStatus(msg) {
@@ -343,10 +335,11 @@ export class OddApp {
   }
 
   _nextAfterAnswer() {
-    this.solvedCount += 1;
     this.roundIndex += 1;
-    if (this.solvedCount % MILESTONE_EVERY === 0) {
-      this._showMilestone(this.solvedCount);
+    this.lifetimeCount = bumpLifetimeCount(LIFETIME_ODD_KEY);
+    this._updateProgress();
+    if (this.lifetimeCount % MILESTONE_EVERY === 0) {
+      this._showMilestone(this.lifetimeCount);
       return;
     }
     this._loadRound();

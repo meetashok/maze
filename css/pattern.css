@@ -33,25 +33,6 @@
   touch-action: manipulation;
 }
 
-.pattern-unit-sep {
-  display: inline-block;
-  width: 10px;
-  height: 28px;
-  margin: 0 2px;
-  border-radius: 999px;
-  background: rgba(31, 138, 126, 0.22);
-  flex: 0 0 auto;
-  align-self: center;
-}
-
-.pattern-ask-sep {
-  width: 18px;
-  height: 2px;
-  margin: 0 6px;
-  border-radius: 2px;
-  background: rgba(31, 138, 126, 0.45);
-}
-
 .pattern-item {
   box-sizing: border-box;
   display: grid;
@@ -265,11 +246,6 @@
 
 [data-theme="dark"] .pattern-item--blank {
   background: rgba(62, 207, 190, 0.12);
-}
-
-[data-theme="dark"] .pattern-unit-sep,
-[data-theme="dark"] .pattern-ask-sep {
-  background: rgba(62, 207, 190, 0.35);
 }
 
 [data-theme="dark"] .pattern-pick-label {

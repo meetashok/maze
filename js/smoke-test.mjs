@@ -15,6 +15,10 @@ import {
   formatTime,
   GAME_PATHS,
   PATH_TO_GAME,
+  getLifetimeCount,
+  bumpLifetimeCount,
+  LIFETIME_PATTERN_KEY,
+  LIFETIME_ODD_KEY,
 } from "./common.js";
 import {
   difficultyLabel,
@@ -38,7 +42,7 @@ import {
 } from "./trace.js";
 import { getGlyphTip, ENCOURAGE_TIPS } from "./trace-tips.js";
 import { letterPaths, numberPaths, shapePaths } from "./dots-shapes.js";
-import { buildPatternRound, PATTERN_DIFFICULTY } from "./pattern.js";
+import { buildPatternRound, PATTERN_TYPES, PATTERN_DIFFICULTY } from "./pattern.js";
 import { buildOddRound, ODD_SETS } from "./odd.js";
 import { buildMemoryDeck, MEMORY_DIFFICULTY, dailyMemorySeed } from "./memory.js";
 import { buildWordSearch, SEARCH_DIFFICULTY, lineCells, dailySearchSeed, SEARCH_WORD_EMOJIS, emojiForSearchWord } from "./search.js";
@@ -499,36 +503,38 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
 
 // Pattern + Odd One Out
 {
-  const p = buildPatternRound(42, "easy");
-  assert(Array.isArray(p.prompt) && p.prompt.length >= 4, "pattern shows at least two AB units");
-  assert(p.type === "AB", "easy pattern is AB");
+  const p = buildPatternRound(42);
+  assert(Array.isArray(p.prompt) && p.prompt.length >= 2, "pattern shows a prompt sequence");
+  assert(PATTERN_TYPES.includes(p.type), "pattern type comes from mixed pool");
   assert(Array.isArray(p.choices) && p.choices.length === 3, "pattern has 3 choices");
   assert(p.choices.includes(p.answer), "pattern answer in choices");
   assert(typeof p.hint === "string" && p.hint.length > 0, "pattern has spoken hint");
-  assert(PATTERN_DIFFICULTY.medium.types.includes("AAB"), "medium has AAB");
-  assert(PATTERN_DIFFICULTY.hard.types.includes("grow"), "hard pattern has grow type");
-  const p2 = buildPatternRound(42, "easy");
+  assert(PATTERN_DIFFICULTY.all.types.includes("AB"), "mixed pool includes AB");
+  assert(PATTERN_DIFFICULTY.all.types.includes("grow"), "mixed pool includes grow");
+  assert(
+    PATTERN_TYPES.every((t) => PATTERN_DIFFICULTY.all.types.includes(t)),
+    "PATTERN_DIFFICULTY.all mirrors PATTERN_TYPES"
+  );
+  const p2 = buildPatternRound(42);
   assert(JSON.stringify(p) === JSON.stringify(p2), "pattern round deterministic");
-  const med = buildPatternRound(99, "medium");
-  assert(["AAB", "ABB", "ABC"].includes(med.type), "medium uses AAB/ABB/ABC");
-  const hard = buildPatternRound(55, "hard");
-  assert(["AABB", "ABC", "grow"].includes(hard.type), "hard uses AABB/ABC/grow");
-  if (hard.type === "grow") {
-    assert(Array.isArray(hard.groupSizes), "grow pattern exposes group sizes for separators");
-  }
+  // Legacy difficulty string args are ignored (still deterministic for same seed).
+  assert(
+    JSON.stringify(buildPatternRound(99, "easy")) === JSON.stringify(buildPatternRound(99, "hard")),
+    "pattern ignores legacy difficulty arg"
+  );
+  const grow = [...Array(40)].map((_, i) => buildPatternRound(200 + i)).find((r) => r.type === "grow");
+  assert(grow && Array.isArray(grow.groupSizes), "mixed pool can produce grow patterns");
   const animalEmojis = ["🐶", "🐱", "🐸", "🦊", "🐻", "🐼", "🐭"];
   for (const seed of [1, 2, 3, 7, 11, 42, 99]) {
-    for (const diff of ["easy", "medium", "hard"]) {
-      const r = buildPatternRound(seed, diff);
-      const used = [...r.prompt, r.answer, ...r.choices].join("");
-      assert(
-        animalEmojis.every((a) => !used.includes(a)),
-        `pattern ${diff} seed ${seed} has no animal icons`
-      );
-    }
+    const r = buildPatternRound(seed);
+    const used = [...r.prompt, r.answer, ...r.choices].join("");
+    assert(
+      animalEmojis.every((a) => !used.includes(a)),
+      `pattern seed ${seed} has no animal icons`
+    );
   }
-  const a1 = buildPatternRound(1, "easy");
-  const a2 = buildPatternRound(2, "easy", { avoidKeys: [a1.key] });
+  const a1 = buildPatternRound(1);
+  const a2 = buildPatternRound(2, { avoidKeys: [a1.key] });
   assert(a1.key !== a2.key || a1.unit.join("") !== a2.unit.join(""), "pattern can avoid recent keys when possible");
 
   const o = buildOddRound(7);
@@ -555,6 +561,24 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
     assert(!ids.has(r.id), `odd session avoids repeat ${r.id}`);
     ids.add(r.id);
   }
+}
+
+// Lifetime counters (localStorage-backed)
+{
+  const store = new Map();
+  globalThis.localStorage = {
+    getItem: (k) => (store.has(k) ? store.get(k) : null),
+    setItem: (k, v) => store.set(k, String(v)),
+    removeItem: (k) => store.delete(k),
+  };
+  store.clear();
+  assert(getLifetimeCount(LIFETIME_PATTERN_KEY) === 0, "pattern lifetime starts at 0");
+  assert(bumpLifetimeCount(LIFETIME_PATTERN_KEY) === 1, "pattern bump to 1");
+  assert(bumpLifetimeCount(LIFETIME_PATTERN_KEY) === 2, "pattern bump to 2");
+  assert(getLifetimeCount(LIFETIME_PATTERN_KEY) === 2, "pattern lifetime persists");
+  assert(getLifetimeCount(LIFETIME_ODD_KEY) === 0, "odd lifetime independent");
+  assert(bumpLifetimeCount(LIFETIME_ODD_KEY) === 1, "odd bump to 1");
+  assert(getLifetimeCount(LIFETIME_PATTERN_KEY) === 2, "pattern lifetime unchanged by odd");
 }
 
 // Trace words + memory themes
