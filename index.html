@@ -18,7 +18,7 @@
     <script>
       /* Set <base> before CSS/JS so /connect and /trace still load assets. */
       (function () {
-        var games = { maze: 1, mazes: 1, connect: 1, dots: 1, trace: 1, memory: 1, match: 1, search: 1, words: 1 };
+        var games = { maze: 1, mazes: 1, connect: 1, dots: 1, trace: 1, memory: 1, match: 1, search: 1, words: 1, pattern: 1, odd: 1 };
         var parts = location.pathname.split("/").filter(Boolean);
         var isGhProject = /\.github\.io$/i.test(location.hostname) && parts.length >= 1;
         var base;
@@ -47,6 +47,8 @@
     <link rel="stylesheet" href="css/trace.css" />
     <link rel="stylesheet" href="css/memory.css?v=12" />
     <link rel="stylesheet" href="css/search.css" />
+    <link rel="stylesheet" href="css/pattern.css" />
+    <link rel="stylesheet" href="css/odd.css" />
     <script>
       (function () {
         try {
@@ -181,6 +183,18 @@
             </div>
           </section>
 
+
+            <div class="control-block">
+              <p class="control-label">Story (optional)</p>
+              <div id="maze-story-themes" class="category-buttons" role="group" aria-label="Story theme"></div>
+            </div>
+            <div class="timer-row">
+              <label class="toggle">
+                <input type="checkbox" id="maze-littles-mode" />
+                <span>Littles mode (longer hints)</span>
+              </label>
+            </div>
+
           <details class="parent-tips">
             <summary>For parents: how to help</summary>
             <div class="parent-tips-body">
@@ -294,6 +308,8 @@
           <section class="trace-panel" aria-label="Trace letters and numbers">
             <p id="trace-daily-chip" class="trace-daily-chip" hidden>Daily glyph</p>
             <div id="trace-stage" class="trace-stage"></div>
+            <p id="trace-coach" class="trace-coach" aria-live="polite"></p>
+            <p id="trace-word-progress" class="trace-word-progress" hidden aria-live="polite"></p>
             <p id="trace-status" class="trace-status">Pick a letter to trace</p>
             <p id="trace-progress" class="trace-progress" aria-live="polite"></p>
             <p id="trace-complete-banner" class="trace-complete-banner" hidden>Great tracing!</p>
@@ -331,9 +347,10 @@
           <section class="quick-controls" aria-label="Trace options">
             <div class="control-block">
               <p class="control-label">Type</p>
-              <div id="trace-kind" class="diff-buttons" role="group" aria-label="Letters or numbers">
+              <div id="trace-kind" class="diff-buttons" role="group" aria-label="Letters, numbers, or words">
                 <button type="button" class="diff-btn is-active" data-kind="letter" aria-pressed="true">Letters</button>
                 <button type="button" class="diff-btn" data-kind="number" aria-pressed="false">Numbers</button>
+                <button type="button" class="diff-btn" data-kind="word" aria-pressed="false">Words</button>
               </div>
             </div>
             <div class="control-block" id="trace-case-block">
@@ -441,6 +458,10 @@
             </div>
             <div class="timer-row">
               <label class="toggle">
+                <input type="checkbox" id="memory-peek-toggle" />
+                <span>Peek at start (littles)</span>
+              </label>
+              <label class="toggle">
                 <input type="checkbox" id="memory-timer-toggle" />
                 <span>Show timer</span>
               </label>
@@ -509,10 +530,84 @@
             </div>
             <div class="timer-row">
               <label class="toggle">
+                <input type="checkbox" id="search-pictures-toggle" checked />
+                <span>Picture clues</span>
+              </label>
+              <label class="toggle">
                 <input type="checkbox" id="search-timer-toggle" />
                 <span>Show timer</span>
               </label>
               <span id="search-timer-display" class="timer-display" hidden>0:00</span>
+            </div>
+          </section>
+        </main>
+      </div>
+
+
+      <!-- What Comes Next (Patterns) -->
+      <div id="game-pattern" class="game-panel" hidden>
+        <main class="main">
+          <section class="pattern-panel" aria-label="Pattern puzzle">
+            <p id="pattern-status" class="pattern-status">What comes next?</p>
+            <p id="pattern-score" class="pattern-score">Round 1 of 5</p>
+            <div id="pattern-stage" class="pattern-stage"></div>
+            <div id="pattern-choices" class="pattern-choices" role="group" aria-label="Answer choices"></div>
+            <div id="pattern-celebrate" class="celebrate-overlay" hidden aria-hidden="true" role="dialog" aria-label="Patterns complete">
+              <span class="celebrate-emoji" aria-hidden="true">🔁</span>
+              <p class="celebrate-title">Pattern pro!</p>
+              <p class="celebrate-detail"></p>
+              <div class="celebrate-actions">
+                <button type="button" class="btn btn-secondary" data-celebrate-again>Play Again</button>
+                <button type="button" class="btn btn-primary" data-celebrate-new>New Patterns</button>
+              </div>
+            </div>
+          </section>
+          <section class="primary-actions" aria-label="Pattern actions">
+            <button type="button" id="pattern-btn-new" class="btn btn-primary">New Game</button>
+            <button type="button" id="pattern-btn-reset" class="btn btn-secondary">Restart</button>
+          </section>
+          <section class="quick-controls" aria-label="Pattern options">
+            <div class="control-block">
+              <p class="control-label">Difficulty</p>
+              <div id="pattern-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
+                <button type="button" class="diff-btn is-active" data-diff="easy" aria-pressed="true">Easy</button>
+                <button type="button" class="diff-btn" data-diff="medium" aria-pressed="false">Medium</button>
+                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
+              </div>
+            </div>
+          </section>
+        </main>
+      </div>
+
+      <!-- Odd One Out -->
+      <div id="game-odd" class="game-panel" hidden>
+        <main class="main">
+          <section class="odd-panel" aria-label="Odd one out puzzle">
+            <p id="odd-status" class="odd-status">Tap the one that does not belong</p>
+            <p id="odd-score" class="odd-score">Round 1 of 5</p>
+            <div id="odd-stage" class="odd-stage" role="group" aria-label="Odd one out choices"></div>
+            <div id="odd-celebrate" class="celebrate-overlay" hidden aria-hidden="true" role="dialog" aria-label="Odd one out complete">
+              <span class="celebrate-emoji" aria-hidden="true">🎯</span>
+              <p class="celebrate-title">Sharp eyes!</p>
+              <p class="celebrate-detail"></p>
+              <div class="celebrate-actions">
+                <button type="button" class="btn btn-secondary" data-celebrate-again>Play Again</button>
+                <button type="button" class="btn btn-primary" data-celebrate-new>New Game</button>
+              </div>
+            </div>
+          </section>
+          <section class="primary-actions" aria-label="Odd one out actions">
+            <button type="button" id="odd-btn-new" class="btn btn-primary">New Game</button>
+            <button type="button" id="odd-btn-reset" class="btn btn-secondary">Restart</button>
+          </section>
+          <section class="quick-controls" aria-label="Odd one out options">
+            <div class="control-block">
+              <p class="control-label">Difficulty</p>
+              <div id="odd-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
+                <button type="button" class="diff-btn is-active" data-diff="easy" aria-pressed="true">Easy</button>
+                <button type="button" class="diff-btn" data-diff="medium" aria-pressed="false">Medium</button>
+                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
+              </div>
             </div>
           </section>
         </main>
@@ -612,6 +707,17 @@
             </label>
           </fieldset>
         </div>
+
+
+          <div class="control-block" style="margin-top:10px">
+            <p class="control-label">Difficulty packs (optional)</p>
+            <div id="print-pack-presets" class="diff-buttons" role="group" aria-label="Print difficulty packs">
+              <button type="button" class="diff-btn" data-pack="easy">Easy pack</button>
+              <button type="button" class="diff-btn" data-pack="medium">Medium pack</button>
+              <button type="button" class="diff-btn" data-pack="hard">Hard pack</button>
+            </div>
+            <p class="print-bulk-help">Fills Bulk with 5 mazes at that size, then switch to Bulk to print.</p>
+          </div>
 
         <div id="print-panel-bulk" class="print-panel" hidden>
           <p class="print-bulk-help">Add grid sizes and how many of each. Every maze prints on its own page.</p>

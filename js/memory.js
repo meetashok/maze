@@ -3,7 +3,7 @@
  */
 
 import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
-import { playPop, playBonk } from "./sound.js";
+import { playPop, playBonk, playMatchChime } from "./sound.js";
 import {
   GameTimer,
   formatTime,
@@ -107,10 +107,12 @@ export class MemoryApp {
     this.flips = 0;
     this.completed = false;
     this.timerEnabled = false;
+    this.peekEnabled = false;
     this.focusIndex = 0;
     this._stopCelebrate = null;
     this._mismatchTimer = 0;
     this._dealTimer = 0;
+    this._peekTimer = 0;
     this.els = {};
     this.timer = new GameTimer((ms) => this._updateTimerDisplay(ms));
   }
@@ -121,6 +123,7 @@ export class MemoryApp {
     this._buildCategories();
     this._bindControls();
     this.timerEnabled = !!this.els.timerToggle?.checked;
+    this.peekEnabled = !!this.els.peekToggle?.checked;
     this._syncTimerVisibility();
     const { game, params } = parseGameHash();
     if (game === "memory") {
@@ -143,6 +146,7 @@ export class MemoryApp {
       btnPrint: $("memory-btn-print"),
       timerToggle: $("memory-timer-toggle"),
       timerDisplay: $("memory-timer-display"),
+      peekToggle: $("memory-peek-toggle"),
       flipsDisplay: $("memory-flips"),
       bestDisplay: $("memory-best-display"),
       status: $("memory-status"),
@@ -222,6 +226,9 @@ export class MemoryApp {
       this.timerEnabled = this.els.timerToggle.checked;
       this._syncTimerVisibility();
     });
+    this.els.peekToggle?.addEventListener("change", () => {
+      this.peekEnabled = !!this.els.peekToggle.checked;
+    });
     this.els.stage?.addEventListener("keydown", (e) => this._onKey(e));
   }
 
@@ -270,6 +277,7 @@ export class MemoryApp {
     hideCelebrationOverlay(this.els.celebrate);
     clearTimeout(this._mismatchTimer);
     clearTimeout(this._dealTimer);
+    clearTimeout(this._peekTimer);
     this.timer.reset();
     this.flipped = [];
     this.matched = new Set();
@@ -370,6 +378,36 @@ export class MemoryApp {
   }
 
   /**
+   * Optional littles peek: briefly show every face, then flip them back.
+   */
+  _maybePeek() {
+    if (!this.peekEnabled || !this.deck) return;
+    const stage = this.els.stage;
+    if (!stage) return;
+    this.lock = true;
+    if (this.els.status) this.els.status.textContent = "Peek… remember the pictures!";
+    stage.querySelectorAll(".memory-card").forEach((btn) => {
+      const index = Number(btn.dataset.index);
+      const card = this.deck.cards[index];
+      if (!card) return;
+      btn.classList.add("is-flipped", "is-peeking");
+      this._paintCardFace(btn, true, card);
+    });
+    clearTimeout(this._peekTimer);
+    this._peekTimer = setTimeout(() => {
+      stage.querySelectorAll(".memory-card").forEach((btn) => {
+        const index = Number(btn.dataset.index);
+        const card = this.deck.cards[index];
+        btn.classList.remove("is-flipped", "is-peeking");
+        this._paintCardFace(btn, false, card);
+      });
+      this.lock = false;
+      this._updateStatus();
+      this._announce("Peek over. Find the pairs!");
+    }, 2200);
+  }
+
+  /**
    * Soft staggered jitter after New Game / Restart / first deal so the board
    * visibly "refreshes" even when every card still shows the same green back.
    */
@@ -385,7 +423,10 @@ export class MemoryApp {
     if (this.els.status) this.els.status.textContent = "Cards shuffled!";
 
     if (reduced) {
-      this._dealTimer = setTimeout(() => this._updateStatus(), 700);
+      this._dealTimer = setTimeout(() => {
+        this._updateStatus();
+        this._maybePeek();
+      }, 700);
       return;
     }
 
@@ -406,6 +447,7 @@ export class MemoryApp {
       stage.classList.remove("is-dealing");
       this.lock = false;
       this._updateStatus();
+      this._maybePeek();
     }, settleMs);
   }
 
@@ -564,7 +606,7 @@ export class MemoryApp {
       this.matched.add(cardA.pairId);
       this._announce(`Match found! ${cardA.label} and ${cardB.label}`);
       this._showFloat("Nice!");
-      playPop();
+      playMatchChime();
       this.flipped = [];
       this.lock = false;
       this._updateStatus();

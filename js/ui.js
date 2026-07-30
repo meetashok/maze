@@ -42,6 +42,20 @@ const SHARE_SHORT_URL = "https://myzoyna.com/";
 const PRINT_CREDIT = "myzoyna.com";
 
 const HINT_STEPS = 4;
+const LITTLES_HINT_STEPS = 8;
+
+const STORY_THEMES = [
+  { id: "frog", label: "Frog & bug", start: "🐸", end: "🐛" },
+  { id: "cat", label: "Cat & fish", start: "🐱", end: "🐟" },
+  { id: "rocket", label: "Rocket & star", start: "🚀", end: "⭐" },
+  { id: "bee", label: "Bee & flower", start: "🐝", end: "🌼" },
+];
+
+const PRINT_PACKS = {
+  easy: { size: 5, count: 5, label: "Easy" },
+  medium: { size: 8, count: 5, label: "Medium" },
+  hard: { size: 12, count: 5, label: "Hard" },
+};
 
 export class MazeApp {
   constructor() {
@@ -55,6 +69,7 @@ export class MazeApp {
     this.isDaily = false;
     this.showSolution = false;
     this.hintCells = [];
+    this.littlesMode = false;
     this.timerEnabled = false;
     this.timerMs = 0;
     this.timerRunning = false;
@@ -84,8 +99,10 @@ export class MazeApp {
     this.tracer.attach(this.els.mazeStage);
 
     this._buildDiffPresets();
+    this._buildStoryThemes();
     this._bindControls();
     this.timerEnabled = !!this.els.timerToggle?.checked;
+    this.littlesMode = !!this.els.littlesMode?.checked;
     this._syncTimerVisibility();
     this._buildIconGrid();
     this._loadFromUrlOrDefault();
@@ -115,6 +132,9 @@ export class MazeApp {
       timerToggle: $("timer-toggle"),
       timerDisplay: $("timer-display"),
       bestDisplay: $("best-display"),
+      storyThemes: $("maze-story-themes"),
+      littlesMode: $("maze-littles-mode"),
+      printPackPresets: $("print-pack-presets"),
       recordBanner: $("record-banner"),
       celebrate: $("maze-celebrate"),
       toast: $("toast"),
@@ -239,6 +259,18 @@ export class MazeApp {
     els.btnUndo?.addEventListener("click", () => this._undoStep());
 
     els.btnHint.addEventListener("click", () => this._showHint());
+
+    els.littlesMode?.addEventListener("change", () => {
+      this.littlesMode = !!els.littlesMode.checked;
+      if (this.littlesMode && this.maze && !this.tracer?.completed) {
+        this._showHint();
+        if (this.els.btnUndo) this.els.btnUndo.hidden = false;
+      }
+    });
+
+    els.printPackPresets?.querySelectorAll("[data-pack]").forEach((btn) => {
+      btn.addEventListener("click", () => this._applyPrintPack(btn.dataset.pack));
+    });
 
     els.btnSolution.addEventListener("click", () => {
       this.showSolution = !this.showSolution;
@@ -449,10 +481,48 @@ export class MazeApp {
     });
   }
 
+  _buildStoryThemes() {
+    const host = this.els.storyThemes;
+    if (!host) return;
+    host.innerHTML = "";
+    for (const theme of STORY_THEMES) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "category-btn";
+      btn.dataset.story = theme.id;
+      btn.innerHTML = `<span aria-hidden="true">${theme.start}${theme.end}</span><span>${theme.label}</span>`;
+      btn.setAttribute("aria-pressed", "false");
+      btn.addEventListener("click", () => {
+        this.startIcon = theme.start;
+        this.endIcon = theme.end;
+        this.renderer?.setIcons?.(this.startIcon, this.endIcon);
+        host.querySelectorAll(".category-btn").forEach((b) => {
+          const on = b === btn;
+          b.classList.toggle("is-active", on);
+          b.setAttribute("aria-pressed", on ? "true" : "false");
+        });
+        this._redraw();
+        this._syncUrl?.();
+      });
+      host.appendChild(btn);
+    }
+  }
+
+  _applyPrintPack(packId) {
+    const pack = PRINT_PACKS[packId];
+    if (!pack) return;
+    this.bulkEntries = [{ size: pack.size, count: pack.count }];
+    this.printMode = "bulk";
+    this._syncPrintModeUI();
+    this._renderBulkRows?.();
+    this._toast?.(`${pack.label} pack ready: ${pack.count} mazes at ${pack.size}×${pack.size}`);
+  }
+
   _showHint() {
     const current = this.tracer.currentCell || this.maze.start;
+    const stepsN = this.littlesMode ? LITTLES_HINT_STEPS : HINT_STEPS;
     // Include current cell so the dashed path connects visually
-    const steps = getHintSteps(this.maze, this.solution, current, HINT_STEPS);
+    const steps = getHintSteps(this.maze, this.solution, current, stepsN);
     this.hintCells = steps.length ? [current, ...steps] : [];
     this.showSolution = false;
     this._syncSolutionButton();

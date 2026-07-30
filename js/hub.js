@@ -1,7 +1,7 @@
 /**
  * Game Hub  -  landing page, navigation, and shared shell.
  *
- * URLs: / (home) · /maze · /connect · /trace · /memory · /search
+ * URLs: / · /maze · /connect · /trace · /memory · /search · /pattern · /odd
  *
  * Flip `offline: true` on a game entry to hide it from the hub while keeping
  * its code, routes, and panel markup for later.
@@ -12,6 +12,8 @@ import { DotsApp } from "./dots.js";
 import { TraceApp } from "./trace.js";
 import { MemoryApp } from "./memory.js";
 import { SearchApp } from "./search.js";
+import { PatternApp } from "./pattern.js";
+import { OddApp } from "./odd.js";
 import {
   parseGameRoute,
   setGameRoute,
@@ -49,7 +51,6 @@ export const GAMES = {
     description: "Connect numbered dots to reveal hidden pictures.",
     howto: "Tap the dots in order to reveal the picture. Use hints if you get stuck!",
     cardBlurb: "Connect dots to reveal pictures!",
-    // Temporarily off the site until gameplay feels solid again.
     offline: true,
   },
   trace: {
@@ -79,12 +80,30 @@ export const GAMES = {
     howto: "Drag across letters to find each word in the list.",
     cardBlurb: "Find hidden words in the grid!",
   },
+  pattern: {
+    title: "What Comes Next?",
+    short: "Patterns",
+    emoji: "🔁",
+    tagline: "Spot the pattern: pick what comes next",
+    description: "Kid-friendly pattern puzzles: colors, shapes, and sequences.",
+    howto: "Look at the row, then tap what comes next.",
+    cardBlurb: "Guess what comes next!",
+  },
+  odd: {
+    title: "Odd One Out",
+    short: "Odd One",
+    emoji: "🎯",
+    tagline: "Find the one that does not belong",
+    description: "Tap the emoji that does not match the others.",
+    howto: "Three match. One is different. Tap the odd one!",
+    cardBlurb: "Find the odd one out!",
+  },
 };
 
 const HOME_META = {
   title: "Puzzle Play",
   tagline: "Pick a game and play!",
-  description: "Kid-friendly puzzle games: mazes, tracing, memory, and word search!",
+  description: "Kid-friendly puzzle games: mazes, tracing, memory, word search, patterns, and more!",
   howto: "Choose a game below. Tap the home button any time to come back here.",
 };
 
@@ -107,6 +126,8 @@ class GameHub {
     this.traceApp = null;
     this.memoryApp = null;
     this.searchApp = null;
+    this.patternApp = null;
+    this.oddApp = null;
     this.els = {};
   }
 
@@ -121,6 +142,8 @@ class GameHub {
       this.traceApp?._render?.();
       this.memoryApp?._render?.();
       this.searchApp?._render?.();
+      this.patternApp?._render?.();
+      this.oddApp?._render?.();
     });
 
     let bootRoute = parseGameRoute();
@@ -130,7 +153,6 @@ class GameHub {
     setGameRoute(bootRoute.game, Object.fromEntries(bootRoute.params.entries()), true);
     bootRoute = parseGameRoute();
 
-    // Show nav/landing immediately; load games without blocking the shell.
     this._bindNav();
     this._applyRoute(bootRoute, true);
 
@@ -140,7 +162,6 @@ class GameHub {
     } catch (err) {
       console.error("Maze init failed", err);
     }
-    // Keep DotsApp code imported for later; skip boot while offline.
     if (isPlayableGame("dots")) {
       try {
         this.dotsApp = new DotsApp();
@@ -167,8 +188,19 @@ class GameHub {
     } catch (err) {
       console.error("Search init failed", err);
     }
+    try {
+      this.patternApp = new PatternApp();
+      await this.patternApp.init();
+    } catch (err) {
+      console.error("Pattern init failed", err);
+    }
+    try {
+      this.oddApp = new OddApp();
+      await this.oddApp.init();
+    } catch (err) {
+      console.error("Odd init failed", err);
+    }
 
-    // Re-apply so deep links hydrate after apps are ready.
     this._applyRoute(parseGameRoute(), true);
     window.addEventListener("popstate", () => this._applyRoute(parseGameRoute(), false));
   }
@@ -191,6 +223,8 @@ class GameHub {
       panelTrace: $("game-trace"),
       panelMemory: $("game-memory"),
       panelSearch: $("game-search"),
+      panelPattern: $("game-pattern"),
+      panelOdd: $("game-odd"),
       footerHowto: $("footer-howto"),
     };
   }
@@ -264,6 +298,8 @@ class GameHub {
     if (game === "trace") return this.els.panelTrace;
     if (game === "memory") return this.els.panelMemory;
     if (game === "search") return this.els.panelSearch;
+    if (game === "pattern") return this.els.panelPattern;
+    if (game === "odd") return this.els.panelOdd;
     return this.els.panelMazes;
   }
 
@@ -275,6 +311,8 @@ class GameHub {
     if (game === "trace") params = this.traceApp?.getShareParams?.() || {};
     if (game === "memory") params = this.memoryApp?.getShareParams?.() || {};
     if (game === "search") params = this.searchApp?.getShareParams?.() || {};
+    if (game === "pattern") params = this.patternApp?.getShareParams?.() || {};
+    if (game === "odd") params = this.oddApp?.getShareParams?.() || {};
     setGameRoute(game, params, false);
     const sp = new URLSearchParams();
     for (const [k, v] of Object.entries(params)) {
@@ -295,6 +333,8 @@ class GameHub {
       this.els.panelTrace,
       this.els.panelMemory,
       this.els.panelSearch,
+      this.els.panelPattern,
+      this.els.panelOdd,
     ];
     for (const panel of panels) {
       if (panel) panel.hidden = panel !== this._panelFor(next);
@@ -326,12 +366,16 @@ class GameHub {
     if (next === "trace") this.traceApp?.onHashChange(params);
     if (next === "memory") this.memoryApp?.onHashChange(params);
     if (next === "search") this.searchApp?.onHashChange(params);
+    if (next === "pattern") this.patternApp?.onHashChange(params);
+    if (next === "odd") this.oddApp?.onHashChange(params);
     if (initial) {
       if (next === "dots") this.dotsApp?._syncUrl?.();
       if (next === "trace") this.traceApp?._syncUrl?.();
       if (next === "mazes") this.mazeApp?._syncUrl?.();
       if (next === "memory") this.memoryApp?._syncUrl?.();
       if (next === "search") this.searchApp?._syncUrl?.();
+      if (next === "pattern") this.patternApp?._syncUrl?.();
+      if (next === "odd") this.oddApp?._syncUrl?.();
     }
   }
 }

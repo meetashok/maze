@@ -34,9 +34,12 @@ import {
   listTraceGlyphs,
   pickDailyTraceGlyph,
   guideStyleForDifficulty,
+  TRACE_WORDS,
 } from "./trace.js";
 import { getGlyphTip, ENCOURAGE_TIPS } from "./trace-tips.js";
 import { letterPaths, numberPaths, shapePaths } from "./dots-shapes.js";
+import { buildPatternRound, PATTERN_DIFFICULTY } from "./pattern.js";
+import { buildOddRound, ODD_DIFFICULTY } from "./odd.js";
 import { buildMemoryDeck, MEMORY_DIFFICULTY, dailyMemorySeed } from "./memory.js";
 import { buildWordSearch, SEARCH_DIFFICULTY, lineCells, dailySearchSeed } from "./search.js";
 import library from "./dots-library.json" with { type: "json" };
@@ -227,12 +230,16 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(GAME_PATHS.trace === "trace", "trace path is /trace");
   assert(GAME_PATHS.memory === "memory", "memory path is /memory");
   assert(GAME_PATHS.search === "search", "search path is /search");
+  assert(GAME_PATHS.pattern === "pattern", "pattern path is /pattern");
+  assert(GAME_PATHS.odd === "odd", "odd path is /odd");
   assert(GAME_PATHS.home === "", "home path is site root");
   assert(PATH_TO_GAME.maze === "mazes", "maze maps to mazes");
   assert(PATH_TO_GAME.connect === "dots", "connect maps to dots");
   assert(PATH_TO_GAME.trace === "trace", "trace maps to trace");
   assert(PATH_TO_GAME.memory === "memory", "memory maps to memory");
   assert(PATH_TO_GAME.search === "search", "search maps to search");
+  assert(PATH_TO_GAME.pattern === "pattern", "pattern maps to pattern");
+  assert(PATH_TO_GAME.odd === "odd", "odd maps to odd");
 }
 
 // Home route stays home (maze must not own the URL on boot)
@@ -453,6 +460,36 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   const d = new Date(2026, 6, 28);
   assert(dailySearchSeed(d) === dailySearchSeed(d) && dailySearchSeed(d) > 0, "daily search seed stable");
   assert(searchWords.categories.length >= 6, "search word lists loaded");
+  assert(
+    SEARCH_DIFFICULTY.easy.dirs.every(([dr, dc]) => Math.abs(dr) + Math.abs(dc) === 1),
+    "easy search has no diagonals"
+  );
+}
+
+// Pattern + Odd One Out
+{
+  const p = buildPatternRound(42, "easy");
+  assert(Array.isArray(p.prompt) && p.prompt.length >= 3, "pattern prompt length");
+  assert(Array.isArray(p.choices) && p.choices.length === 3, "pattern has 3 choices");
+  assert(p.choices.includes(p.answer), "pattern answer in choices");
+  assert(PATTERN_DIFFICULTY.hard.types.includes("grow"), "hard pattern has grow type");
+  const p2 = buildPatternRound(42, "easy");
+  assert(JSON.stringify(p) === JSON.stringify(p2), "pattern round deterministic");
+
+  const o = buildOddRound(7, "easy");
+  assert(o.tiles.length === 4, "odd round has 4 tiles");
+  assert(o.tiles.filter((t) => t.isOdd).length === 1, "odd round has one odd tile");
+  assert(typeof o.oddIndex === "number" && o.tiles[o.oddIndex].isOdd, "oddIndex points to odd tile");
+  const o2 = buildOddRound(7, "easy");
+  assert(JSON.stringify(o) === JSON.stringify(o2), "odd round deterministic");
+  assert(Object.keys(ODD_DIFFICULTY).length === 3, "odd difficulties");
+}
+
+// Trace words + memory themes
+{
+  assert(TRACE_WORDS.includes("CAT") && TRACE_WORDS.includes("DOG"), "trace words include CAT/DOG");
+  assert(memoryThemes.categories.some((c) => c.id === "nature"), "memory nature theme");
+  assert(memoryThemes.categories.some((c) => c.id === "sports"), "memory sports theme");
 }
 
 if (failed) {

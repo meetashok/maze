@@ -143,6 +143,14 @@
   font-size: 1.1rem;
 }
 
+.search-word.has-picture .search-word-emoji {
+  font-size: 1.55rem;
+}
+
+.search-preview.is-pictures .search-preview-item {
+  font-size: 1.05rem;
+}
+
 .search-word-check {
   margin-left: auto;
   color: #2f9e44;
