@@ -61,6 +61,99 @@ export const SEARCH_DIFFICULTY = {
   },
 };
 
+/** Per-word clue icons — keep in sync with every entry in search-words.json. */
+export const SEARCH_WORD_EMOJIS = {
+  // Animals
+  CAT: "🐱",
+  DOG: "🐶",
+  FISH: "🐟",
+  BIRD: "🐦",
+  FROG: "🐸",
+  BEAR: "🐻",
+  DUCK: "🦆",
+  LION: "🦁",
+  DEER: "🦌",
+  WOLF: "🐺",
+  HORSE: "🐴",
+  TIGER: "🐯",
+  SNAKE: "🐍",
+  BUNNY: "🐰",
+  MOUSE: "🐭",
+  // Food
+  PIE: "🥧",
+  JAM: "🫙",
+  EGG: "🥚",
+  CAKE: "🎂",
+  MILK: "🥛",
+  RICE: "🍚",
+  CORN: "🌽",
+  SOUP: "🍲",
+  TACO: "🌮",
+  PIZZA: "🍕",
+  BREAD: "🍞",
+  GRAPE: "🍇",
+  CANDY: "🍬",
+  APPLE: "🍎",
+  // Colors
+  RED: "🔴",
+  BLUE: "🔵",
+  PINK: "🩷",
+  GOLD: "🥇",
+  GRAY: "🩶",
+  GREEN: "🟢",
+  WHITE: "⚪",
+  BLACK: "⚫",
+  BROWN: "🟤",
+  ORANGE: "🟠",
+  PURPLE: "🟣",
+  YELLOW: "🟡",
+  SILVER: "🪙",
+  // Space
+  SUN: "☀️",
+  MOON: "🌙",
+  STAR: "⭐",
+  MARS: "🟠",
+  COMET: "☄️",
+  EARTH: "🌍",
+  PLUTO: "🌑",
+  ORBIT: "💫",
+  ROCKET: "🚀",
+  SATURN: "🪐",
+  GALAXY: "🌌",
+  PLANET: "🪐",
+  METEOR: "☄️",
+  // Family
+  MOM: "👩",
+  DAD: "👨",
+  SIS: "👧",
+  BRO: "👦",
+  BABY: "👶",
+  AUNT: "👩",
+  UNCLE: "👨",
+  NANA: "👵",
+  PAPA: "👴",
+  FAMILY: "👪",
+  SISTER: "👧",
+  BROTHER: "👦",
+  COUSIN: "🧒",
+  // Seasonal
+  ELF: "🧝",
+  HAT: "🎩",
+  SNOW: "❄️",
+  BELL: "🔔",
+  TREE: "🎄",
+  GIFT: "🎁",
+  SANTA: "🎅",
+  ANGEL: "👼",
+  HOLLY: "🌿",
+  SLEIGH: "🛷",
+  REINDEER: "🦌",
+};
+
+export function emojiForSearchWord(word, fallback = "🔍") {
+  return SEARCH_WORD_EMOJIS[String(word || "").toUpperCase()] || fallback;
+}
+
 export function dailySearchSeed(date = new Date()) {
   return hashString(`daily-search:${todayDateString(date)}`);
 }
@@ -453,30 +546,7 @@ export class SearchApp {
   }
 
   _emojiForWord(word) {
-    // Best-effort: map a few common words; otherwise category emoji
-    const map = {
-      CAT: "🐱",
-      DOG: "🐶",
-      FISH: "🐟",
-      BIRD: "🐦",
-      FROG: "🐸",
-      BEAR: "🐻",
-      DUCK: "🦆",
-      LION: "🦁",
-      SUN: "☀️",
-      MOON: "🌙",
-      STAR: "⭐",
-      PIE: "🥧",
-      CAKE: "🎂",
-      RED: "🔴",
-      BLUE: "🔵",
-      MOM: "👩",
-      DAD: "👨",
-      ELF: "🧝",
-      SNOW: "❄️",
-      TREE: "🎄",
-    };
-    return map[word] || this.puzzle?.category?.emoji || "🔍";
+    return emojiForSearchWord(word, this.puzzle?.category?.emoji || "🔍");
   }
 
   _renderPreview() {
