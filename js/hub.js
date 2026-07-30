@@ -2,6 +2,9 @@
  * Game Hub  -  landing page, navigation, and shared shell.
  *
  * URLs: / (home) · /maze · /connect · /trace · /memory · /search
+ *
+ * Flip `offline: true` on a game entry to hide it from the hub while keeping
+ * its code, routes, and panel markup for later.
  */
 
 import { MazeApp } from "./ui.js";
@@ -24,7 +27,8 @@ import { bindSoundToggle } from "./sound.js";
  *   tagline: string,
  *   description: string,
  *   howto: string,
- *   cardBlurb: string
+ *   cardBlurb: string,
+ *   offline?: boolean
  * }>}
  */
 export const GAMES = {
@@ -45,6 +49,8 @@ export const GAMES = {
     description: "Connect numbered dots to reveal hidden pictures.",
     howto: "Tap the dots in order to reveal the picture. Use hints if you get stuck!",
     cardBlurb: "Connect dots to reveal pictures!",
+    // Temporarily off the site until gameplay feels solid again.
+    offline: true,
   },
   trace: {
     title: "Trace Letters & Numbers",
@@ -78,11 +84,20 @@ export const GAMES = {
 const HOME_META = {
   title: "Puzzle Play",
   tagline: "Pick a game and play!",
-  description: "Kid-friendly puzzle games: mazes, dots, tracing, memory, and word search!",
+  description: "Kid-friendly puzzle games: mazes, tracing, memory, and word search!",
   howto: "Choose a game below. Tap the home button any time to come back here.",
 };
 
-const GAME_IDS = Object.keys(GAMES);
+/** Games shown in nav + landing (excludes offline entries). */
+export function visibleGameIds() {
+  return Object.keys(GAMES).filter((id) => !GAMES[id].offline);
+}
+
+function isPlayableGame(id) {
+  return Boolean(GAMES[id] && !GAMES[id].offline);
+}
+
+const GAME_IDS = visibleGameIds();
 
 class GameHub {
   constructor() {
@@ -109,7 +124,7 @@ class GameHub {
     });
 
     let bootRoute = parseGameRoute();
-    if (bootRoute.game !== "home" && !GAMES[bootRoute.game]) {
+    if (bootRoute.game !== "home" && !isPlayableGame(bootRoute.game)) {
       bootRoute = { game: "home", params: new URLSearchParams(), legacyHash: false };
     }
     setGameRoute(bootRoute.game, Object.fromEntries(bootRoute.params.entries()), true);
@@ -125,11 +140,14 @@ class GameHub {
     } catch (err) {
       console.error("Maze init failed", err);
     }
-    try {
-      this.dotsApp = new DotsApp();
-      await this.dotsApp.init();
-    } catch (err) {
-      console.error("Dots init failed", err);
+    // Keep DotsApp code imported for later; skip boot while offline.
+    if (isPlayableGame("dots")) {
+      try {
+        this.dotsApp = new DotsApp();
+        await this.dotsApp.init();
+      } catch (err) {
+        console.error("Dots init failed", err);
+      }
     }
     try {
       this.traceApp = new TraceApp();
@@ -250,7 +268,7 @@ class GameHub {
   }
 
   _switchGame(game) {
-    if (game !== "home" && !GAMES[game]) return;
+    if (game !== "home" && !isPlayableGame(game)) return;
     if (game === this.activeGame) return;
     let params = {};
     if (game === "dots") params = this.dotsApp?.getShareParams?.() || {};
@@ -266,7 +284,7 @@ class GameHub {
   }
 
   _applyRoute({ game, params }, initial) {
-    const next = game === "home" || GAMES[game] ? game : "home";
+    const next = game === "home" || isPlayableGame(game) ? game : "home";
     this.activeGame = next;
     this._syncNavActive(next);
 
@@ -285,7 +303,7 @@ class GameHub {
     if (next === "home") {
       if (this.els.brand) this.els.brand.textContent = HOME_META.title;
       if (this.els.tagline) this.els.tagline.textContent = HOME_META.tagline;
-      document.title = `${HOME_META.title}: Mazes, Dots & More`;
+      document.title = `${HOME_META.title}: Kid Puzzles`;
       if (this.els.footerHowto) this.els.footerHowto.textContent = HOME_META.howto;
       const desc = document.querySelector('meta[name="description"]');
       if (desc) desc.content = HOME_META.description;

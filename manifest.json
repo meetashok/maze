@@ -1,7 +1,7 @@
 {
   "name": "Puzzle Play",
   "short_name": "Puzzle Play",
-  "description": "Kid-friendly mazes, connect the dots, tracing, memory, and word search.",
+  "description": "Kid-friendly mazes, tracing, memory, and word search.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#e8f6fb",
