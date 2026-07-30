@@ -23,7 +23,7 @@ const DOTS_PB_KEY = "dots-personal-bests";
 const DIFFICULTY_COUNTS = { easy: 12, medium: 25, hard: 50 };
 const RAINBOW = ["#ff6b4a", "#ffc857", "#6bcb77", "#4ecdc4", "#5c7cfa", "#c77dff"];
 const INACTIVITY_HINT_MS = 5000;
-const PRINT_CREDIT = "meetashok.github.io/maze · bit.ly/mazeit";
+const PRINT_CREDIT = "myzoyna.com";
 const MIN_VERTEX_DIST = 0.005;
 const MIN_DOT_SPACING = 0.09;
 const FIT_MIN = 0.1;
@@ -717,7 +717,7 @@ export class DotsApp {
     if (this.els.completeBanner) this.els.completeBanner.hidden = false;
     if (this.els.completeTime) {
       this.els.completeTime.textContent = this.timerEnabled
-        ? `Time: ${formatTime(ms)}${isNew ? " — New record!" : ""}`
+        ? `Time: ${formatTime(ms)}${isNew ? " · New record!" : ""}`
         : "Picture complete!";
     }
     const best = getStoredBest(DOTS_PB_KEY, `${this.difficulty}:${this.labelType}`);
@@ -748,7 +748,7 @@ export class DotsApp {
   _updateBestDisplay() {
     const best = getStoredBest(DOTS_PB_KEY, `${this.difficulty}:${this.labelType}`);
     if (this.els.bestDisplay) {
-      this.els.bestDisplay.textContent = best ? `Best: ${formatTime(best)}` : "Best: —";
+      this.els.bestDisplay.textContent = best ? `Best: ${formatTime(best)}` : "Best: -";
     }
   }
 
@@ -1046,7 +1046,7 @@ export class DotsApp {
     svg.setAttribute("class", "dots-print-svg");
 
     for (const path of puzzle.guides || []) {
-      // Worksheets: dots + numbers only — no picture spoilers unless solution/coloring.
+      // Worksheets: dots + numbers only  -  no picture spoilers unless solution/coloring.
       if (!showSolution) continue;
       if (path.length < 2) continue;
       const guide = document.createElementNS("http://www.w3.org/2000/svg", "path");
@@ -1130,7 +1130,7 @@ export class DotsApp {
       page.className = "print-page";
       const title = document.createElement("h1");
       title.className = "print-title";
-      title.textContent = `${this.picture.name} — Coloring Page`;
+      title.textContent = `${this.picture.name}: Coloring Page`;
       page.appendChild(title);
       const svg = this.createPrintSvg({
         puzzle: this.puzzle,
@@ -1150,7 +1150,7 @@ export class DotsApp {
       page.className = "print-page print-page-worksheet";
       const title = document.createElement("h1");
       title.className = "print-title";
-      title.textContent = `Connect the Dots — ${count} puzzles · ${this.difficulty}`;
+      title.textContent = `Connect the Dots: ${count} puzzles · ${this.difficulty}`;
       page.appendChild(title);
       const grid = document.createElement("div");
       grid.className = "print-dots-grid";
@@ -1190,7 +1190,7 @@ export class DotsApp {
       title.className = "print-title";
       const cat = this.lib?.categories?.find((c) => c.id === this.category);
       const catEmoji = cat?.emoji || "🔵";
-      title.textContent = `${catEmoji} ${this.picture.name} — ${this.difficulty}`;
+      title.textContent = `${catEmoji} ${this.picture.name}: ${this.difficulty}`;
       page.appendChild(title);
       const svg = this.createPrintSvg({
         puzzle: this.puzzle,

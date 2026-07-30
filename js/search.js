@@ -1,5 +1,5 @@
 /**
- * Word Search — find hidden words in a letter grid.
+ * Word Search  -  find hidden words in a letter grid.
  */
 
 import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
@@ -16,7 +16,7 @@ import {
   todayDateString,
 } from "./common.js";
 
-const PRINT_CREDIT = "meetashok.github.io/maze · bit.ly/mazeit";
+const PRINT_CREDIT = "myzoyna.com";
 const HIGHLIGHT_COLORS = ["#ff6b4a", "#1f8a7e", "#ffc857", "#5c7cfa", "#6bcb77", "#c77dff"];
 
 const BLOCKLIST = new Set([
@@ -788,8 +788,8 @@ export class SearchApp {
       page.className = "print-page";
       const title = document.createElement("h1");
       title.className = "print-title";
-      title.textContent = `Word Search — ${puzzle.category.emoji} ${puzzle.category.name} · ${puzzle.difficulty} (${puzzle.words.length} words)${
-        answers ? " — Answer key" : ""
+      title.textContent = `Word Search: ${puzzle.category.emoji} ${puzzle.category.name} · ${puzzle.difficulty} (${puzzle.words.length} words)${
+        answers ? ": Answer key" : ""
       }`;
       page.appendChild(title);
       page.appendChild(this._buildPrintGrid({ withAnswers: answers }));
@@ -809,7 +809,7 @@ export class SearchApp {
       page.className = "print-page print-page-worksheet";
       const title = document.createElement("h1");
       title.className = "print-title";
-      title.textContent = `Word Search — 2 puzzles · ${this.difficulty}`;
+      title.textContent = `Word Search: 2 puzzles · ${this.difficulty}`;
       page.appendChild(title);
       const grid = document.createElement("div");
       grid.className = "search-print-batch";

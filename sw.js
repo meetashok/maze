@@ -1,5 +1,5 @@
 /* Puzzle Play service worker — network-first so deploys aren't stuck behind cache. */
-const CACHE = "puzzle-play-v11";
+const CACHE = "puzzle-play-v12";
 const ASSETS = [
   "./",
   "./index.html",

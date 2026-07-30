@@ -1,5 +1,5 @@
 /**
- * Memory Match — flip cards to find matching pairs.
+ * Memory Match  -  flip cards to find matching pairs.
  */
 
 import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
@@ -19,7 +19,7 @@ import {
 } from "./common.js";
 
 const PB_KEY = "memory-personal-bests";
-const PRINT_CREDIT = "meetashok.github.io/maze · bit.ly/mazeit";
+const PRINT_CREDIT = "myzoyna.com";
 const MISMATCH_PAUSE_MS = 1000;
 
 export const MEMORY_DIFFICULTY = {
@@ -303,7 +303,7 @@ export class MemoryApp {
   _updateBest() {
     const best = getStoredBest(PB_KEY, this.difficulty);
     if (this.els.bestDisplay) {
-      this.els.bestDisplay.textContent = best ? `Best: ${best} flips` : "Best: —";
+      this.els.bestDisplay.textContent = best ? `Best: ${best} flips` : "Best: -";
     }
   }
 
@@ -322,7 +322,7 @@ export class MemoryApp {
       this.els.status.textContent = "Nice! Tap one more card…";
       return;
     }
-    this.els.status.textContent = `${this.deck.category.emoji} ${this.deck.category.name} — ${found} of ${this.deck.pairs} pairs`;
+    this.els.status.textContent = `${this.deck.category.emoji} ${this.deck.category.name}: ${found} of ${this.deck.pairs} pairs`;
   }
 
   _announce(msg) {
@@ -336,7 +336,7 @@ export class MemoryApp {
     stage.style.setProperty("--memory-rows", String(this.deck.rows));
     stage.innerHTML = "";
     stage.setAttribute("role", "grid");
-    stage.setAttribute("aria-label", "Memory cards — tap to flip");
+    stage.setAttribute("aria-label", "Memory cards: tap to flip");
     stage.tabIndex = 0;
 
     this.deck.cards.forEach((card, index) => {
@@ -345,7 +345,7 @@ export class MemoryApp {
       btn.className = "memory-card";
       btn.dataset.index = String(index);
       btn.setAttribute("role", "gridcell");
-      // Face content is filled only by _syncCardDom — never put the answer on the button
+      // Face content is filled only by _syncCardDom  -  never put the answer on the button
       btn.innerHTML = `<span class="memory-face memory-face--back" aria-hidden="true"></span>`;
       btn.addEventListener("pointerup", (e) => {
         if (e.pointerType === "mouse" && e.button !== 0) return;
@@ -380,7 +380,7 @@ export class MemoryApp {
           faceEl.className = `memory-face memory-face--${isGlyph ? "glyph" : "emoji"}`;
           faceEl.textContent = card.face;
         } else {
-          // Face-down: only ? + Tap — answer emoji must not exist in the DOM
+          // Face-down: only ? + Tap  -  answer emoji must not exist in the DOM
           faceEl.className = "memory-face memory-face--back";
           faceEl.replaceChildren();
           const q = document.createElement("span");
@@ -397,7 +397,7 @@ export class MemoryApp {
         "aria-label",
         isFlipped
           ? `Card ${index + 1} of ${this.deck.cards.length}, ${card.label}`
-          : `Card ${index + 1} of ${this.deck.cards.length}, face down — tap to flip`
+          : `Card ${index + 1} of ${this.deck.cards.length}, face down: tap to flip`
       );
     });
   }
@@ -490,7 +490,7 @@ export class MemoryApp {
     let isNew = false;
     if (this.flips > 0) {
       const result = saveStoredBest(PB_KEY, this.difficulty, this.flips);
-      // saveStoredBest treats lower as better for times — for flips lower is also better.
+      // saveStoredBest treats lower as better for times  -  for flips lower is also better.
       // Our saveStoredBest only updates when ms < prev, so it works for flip counts too.
       isNew = result.isNew;
       this._updateBest();
@@ -594,11 +594,11 @@ export class MemoryApp {
     puzzle.className = "print-page";
     const title = document.createElement("h1");
     title.className = "print-title";
-    title.textContent = `Memory Match — ${this.deck.category.name} · ${this.difficulty} (${this.deck.pairs} pairs)`;
+    title.textContent = `Memory Match: ${this.deck.category.name} · ${this.difficulty} (${this.deck.pairs} pairs)`;
     puzzle.appendChild(title);
     const help = document.createElement("p");
     help.className = "print-bulk-help";
-    help.textContent = "Cut out the cards. Numbers mark pairs — flip them over and play!";
+    help.textContent = "Cut out the cards. Numbers mark pairs: flip them over and play!";
     puzzle.appendChild(help);
 
     const grid = document.createElement("div");
@@ -621,7 +621,7 @@ export class MemoryApp {
     key.className = "print-page";
     const keyTitle = document.createElement("h1");
     keyTitle.className = "print-title";
-    keyTitle.textContent = `Answer key — ${this.deck.category.name}`;
+    keyTitle.textContent = `Answer key: ${this.deck.category.name}`;
     key.appendChild(keyTitle);
     const keyGrid = document.createElement("div");
     keyGrid.className = "memory-print-grid";

@@ -1,5 +1,5 @@
 /**
- * Trace Letters & Numbers — print-first worksheets + light online practice.
+ * Trace Letters & Numbers  -  print-first worksheets + light online practice.
  */
 
 import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
@@ -16,7 +16,7 @@ import {
 import { letterPaths, numberPaths } from "./dots-shapes.js";
 import { getGlyphTip, encourageTipForGlyph } from "./trace-tips.js";
 
-const PRINT_CREDIT = "generated via bit.ly/mazeit · meetashok.github.io/maze";
+const PRINT_CREDIT = "myzoyna.com";
 const LETTERS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const LETTERS_LOWER = "abcdefghijklmnopqrstuvwxyz";
 const DIGITS = "0123456789";
@@ -439,7 +439,7 @@ export class TraceApp {
     this.els.progress.textContent = stars
       ? `Practiced ${this.glyph}: ${"★".repeat(stars)}${"☆".repeat(3 - stars)} · ${practiced} glyphs total`
       : practiced
-        ? `${practiced} glyphs practiced — keep going!`
+        ? `${practiced} glyphs practiced: keep going!`
         : "Trace to earn stars";
   }
 
@@ -468,7 +468,7 @@ export class TraceApp {
       this.els.status.textContent =
         n <= 1
           ? `Trace the ${this.kind === "number" ? "number" : "letter"} ${this.glyph}`
-          : `Stroke ${this.strokeIndex + 1} of ${n} — start at the glowing dot`;
+          : `Stroke ${this.strokeIndex + 1} of ${n}: start at the glowing dot`;
     }
     this._updateParentTips();
   }
@@ -574,7 +574,7 @@ export class TraceApp {
       const stroke = this.item.paths[this.strokeIndex];
       if (!stroke?.length) return;
       const near = nearestOnPath(stroke, pt);
-      // Missed the start dot — don't capture the pointer so the page can scroll.
+      // Missed the start dot  -  don't capture the pointer so the page can scroll.
       if (near.dist > TRACE_THRESHOLD * 1.4 || near.progress > 0.25) {
         return;
       }
@@ -928,12 +928,12 @@ export class TraceApp {
       for (let i = 0; i < all.length; i += 4) {
         const chunk = all.slice(i, i + 4);
         sheet.appendChild(
-          makePage(`Trace Letters — ${chunk[0].glyph}–${chunk[chunk.length - 1].glyph}`, chunk, "print-trace-grid")
+          makePage(`Trace Letters: ${chunk[0].glyph}–${chunk[chunk.length - 1].glyph}`, chunk, "print-trace-grid")
         );
       }
     } else if (layout === "pack-numbers") {
       const all = listTraceGlyphs("number");
-      sheet.appendChild(makePage("Trace Numbers — 0–9", all, "print-trace-grid-numbers"));
+      sheet.appendChild(makePage("Trace Numbers: 0-9", all, "print-trace-grid-numbers"));
     } else if (layout === "worksheet4" || layout === "worksheet6") {
       const count = layout === "worksheet4" ? 4 : 6;
       const pool = listTraceGlyphs(this.kind);
@@ -941,7 +941,7 @@ export class TraceApp {
       const items = [];
       for (let i = 0; i < count; i++) items.push(pool[(Math.max(0, idx) + i) % pool.length]);
       sheet.appendChild(
-        makePage(`Trace Practice — ${count} glyphs`, items, "print-trace-grid")
+        makePage(`Trace Practice: ${count} glyphs`, items, "print-trace-grid")
       );
     } else {
       sheet.appendChild(makePage(`Trace ${this.glyph}`, [this.item], null));

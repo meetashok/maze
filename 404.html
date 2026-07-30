@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="description" content="Kid-friendly puzzle games — mazes, connect the dots, tracing, memory, and word search!" />
+    <meta name="description" content="Kid-friendly puzzle games: mazes, connect the dots, tracing, memory, and word search!" />
     <meta name="theme-color" content="#2a9d8f" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -12,9 +12,9 @@
     <link rel="icon" href="assets/favicon.ico" sizes="any" />
     <link rel="apple-touch-icon" href="assets/apple-touch-icon.png" />
     <meta property="og:title" content="Puzzle Play" />
-    <meta property="og:description" content="Kid-friendly puzzle games — mazes, connect the dots, tracing, memory, and word search!" />
+    <meta property="og:description" content="Kid-friendly puzzle games: mazes, connect the dots, tracing, memory, and word search!" />
     <meta property="og:image" content="assets/icon-512.png" />
-    <title>Puzzle Play — Mazes, Dots & More</title>
+    <title>Puzzle Play: Mazes, Dots & More</title>
     <script>
       /* Set <base> before CSS/JS so /connect and /trace still load assets. */
       (function () {
@@ -59,13 +59,13 @@
   <body>
     <div class="app">
       <header class="top-bar">
-        <div class="brand-block">
+        <button type="button" class="brand-block" id="brand-home" aria-label="Puzzle Play home">
           <div class="brand-row">
             <img class="brand-mark" src="assets/logo-mark.svg" width="44" height="44" alt="" />
             <p id="hub-brand" class="brand">Puzzle Play</p>
           </div>
           <p id="hub-tagline" class="tagline">Pick a game and play!</p>
-        </div>
+        </button>
         <div class="top-bar-actions">
           <p id="brand-date" class="daily-chip" hidden></p>
           <p id="dots-daily-chip" class="daily-chip" hidden></p>
@@ -81,7 +81,7 @@
       </header>
 
       <nav class="game-nav" id="game-nav" aria-label="Games">
-        <button type="button" class="nav-home" id="nav-home" aria-label="Home — Puzzle Play" title="Home">
+        <button type="button" class="nav-home" id="nav-home" aria-label="Home: Puzzle Play" title="Home">
           <span aria-hidden="true">🏠</span>
         </button>
         <div class="game-nav-primary" id="game-nav-primary"></div>
@@ -102,23 +102,6 @@
       <!-- Mazes -->
       <div id="game-mazes" class="game-panel" hidden>
         <main class="main">
-          <section class="quick-controls" aria-label="Maze difficulty">
-            <div class="control-block">
-              <p class="control-label">Difficulty <span id="size-kid-label" class="size-kid-label">Getting bigger!</span></p>
-              <div id="maze-diff-presets" class="diff-presets" role="group" aria-label="Maze size"></div>
-            </div>
-            <div class="control-block detour-block">
-              <p class="control-label">Style</p>
-              <div id="detour-buttons" class="detour-buttons" role="group" aria-label="Maze style">
-                <button type="button" class="detour-btn" data-detour="0" aria-pressed="false">Simple</button>
-                <button type="button" class="detour-btn" data-detour="1" aria-pressed="true">Lots of paths</button>
-                <button type="button" class="detour-btn" data-detour="2" aria-pressed="false">Tricky dead ends</button>
-                <button type="button" class="detour-btn" data-detour="3" aria-pressed="false">Very tricky</button>
-                <button type="button" class="detour-btn" data-detour="4" aria-pressed="false">Confusing paths</button>
-              </div>
-            </div>
-          </section>
-
           <section class="maze-panel" aria-label="Maze">
             <div id="maze-stage" class="maze-stage" tabindex="0"></div>
             <button type="button" id="btn-maze-undo" class="maze-undo-btn" hidden aria-label="Undo last step">↩ Undo</button>
@@ -138,6 +121,23 @@
             <button type="button" id="btn-new" class="btn btn-primary">New Maze</button>
             <button type="button" id="btn-clear" class="btn btn-secondary">Clear Path</button>
             <button type="button" id="btn-daily" class="btn btn-secondary">Daily Maze</button>
+          </section>
+
+          <section class="quick-controls" aria-label="Maze difficulty">
+            <div class="control-block">
+              <p class="control-label">Difficulty <span id="size-kid-label" class="size-kid-label">Getting bigger!</span></p>
+              <div id="maze-diff-presets" class="diff-presets" role="group" aria-label="Maze size"></div>
+            </div>
+            <div class="control-block detour-block">
+              <p class="control-label">Style</p>
+              <div id="detour-buttons" class="detour-buttons" role="group" aria-label="Maze style">
+                <button type="button" class="detour-btn" data-detour="0" aria-pressed="false">Simple</button>
+                <button type="button" class="detour-btn" data-detour="1" aria-pressed="true">Lots of paths</button>
+                <button type="button" class="detour-btn" data-detour="2" aria-pressed="false">Tricky dead ends</button>
+                <button type="button" class="detour-btn" data-detour="3" aria-pressed="false">Very tricky</button>
+                <button type="button" class="detour-btn" data-detour="4" aria-pressed="false">Confusing paths</button>
+              </div>
+            </div>
           </section>
 
           <section class="toolbar" aria-label="Controls">
@@ -177,16 +177,16 @@
                 <span>Timer</span>
               </label>
               <span id="timer-display" class="timer-display">0:00.0</span>
-              <span id="best-display" class="best-display">Best: —</span>
+              <span id="best-display" class="best-display">Best: -</span>
             </div>
           </section>
 
           <details class="parent-tips">
-            <summary>For parents — how to help</summary>
+            <summary>For parents: how to help</summary>
             <div class="parent-tips-body">
               <p>Start with Easy (tiny maze). Let them try before showing hints.</p>
               <p>Talk about the path: “Which way should the frog go?”</p>
-              <p>Drag backward to undo — let them discover this on their own.</p>
+              <p>Drag backward to undo: let them discover this on their own.</p>
               <p>If mazes feel easy, try Style → <strong>Confusing paths</strong> (loops + tricky starts) before just making the grid bigger.</p>
               <p>Daily Maze is a nice shared ritual; print worksheets for trips.</p>
             </div>
@@ -197,21 +197,6 @@
       <!-- Connect the Dots -->
       <div id="game-dots" class="game-panel" hidden>
         <main class="main">
-          <section class="quick-controls" aria-label="Dots options">
-            <div class="control-block">
-              <p class="control-label">Category</p>
-              <div id="dots-categories" class="category-buttons" role="group" aria-label="Picture category"></div>
-            </div>
-            <div class="control-block">
-              <p class="control-label">Difficulty</p>
-              <div id="dots-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
-                <button type="button" class="diff-btn" data-diff="easy" aria-pressed="false">Easy</button>
-                <button type="button" class="diff-btn is-active" data-diff="medium" aria-pressed="true">Medium</button>
-                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
-              </div>
-            </div>
-          </section>
-
           <section class="dots-panel" aria-label="Connect the dots puzzle">
             <p id="dots-status" class="dots-status">Tap the glowing dot to start</p>
             <div id="dots-stage" class="dots-stage"></div>
@@ -235,6 +220,21 @@
             <button type="button" id="dots-btn-new" class="btn btn-primary">New Picture</button>
             <button type="button" id="dots-btn-reset" class="btn btn-secondary">Start Over</button>
             <button type="button" id="dots-btn-daily" class="btn btn-secondary">Daily Puzzle</button>
+          </section>
+
+          <section class="quick-controls" aria-label="Dots options">
+            <div class="control-block">
+              <p class="control-label">Category</p>
+              <div id="dots-categories" class="category-buttons" role="group" aria-label="Picture category"></div>
+            </div>
+            <div class="control-block">
+              <p class="control-label">Difficulty</p>
+              <div id="dots-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
+                <button type="button" class="diff-btn" data-diff="easy" aria-pressed="false">Easy</button>
+                <button type="button" class="diff-btn is-active" data-diff="medium" aria-pressed="true">Medium</button>
+                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
+              </div>
+            </div>
           </section>
 
           <section class="toolbar" aria-label="Dots controls">
@@ -272,17 +272,17 @@
                 <span>Auto-hint</span>
               </label>
               <span id="dots-timer-display" class="timer-display">0:00.0</span>
-              <span id="dots-best-display" class="best-display">Best: —</span>
+              <span id="dots-best-display" class="best-display">Best: -</span>
             </div>
           </section>
 
           <details class="parent-tips">
-            <summary>For parents — how to help</summary>
+            <summary>For parents: how to help</summary>
             <div class="parent-tips-body">
               <p>Easy mode has bigger dots for little fingers.</p>
               <p>Use Numbers for counting practice, Letters for ABC practice, Skip Counting for math.</p>
-              <p>Auto-hint gently pulses the next dot if they get stuck — leave it on for younger kids.</p>
-              <p>The picture stays hidden until the last connection — that’s the big reveal!</p>
+              <p>Auto-hint gently pulses the next dot if they get stuck: leave it on for younger kids.</p>
+              <p>The picture stays hidden until the last connection. That’s the big reveal!</p>
             </div>
           </details>
         </main>
@@ -291,6 +291,43 @@
       <!-- Trace -->
       <div id="game-trace" class="game-panel" hidden>
         <main class="main">
+          <section class="trace-panel" aria-label="Trace letters and numbers">
+            <p id="trace-daily-chip" class="trace-daily-chip" hidden>Daily glyph</p>
+            <div id="trace-stage" class="trace-stage"></div>
+            <p id="trace-status" class="trace-status">Pick a letter to trace</p>
+            <p id="trace-progress" class="trace-progress" aria-live="polite"></p>
+            <p id="trace-complete-banner" class="trace-complete-banner" hidden>Great tracing!</p>
+            <div id="trace-celebrate" class="celebrate-overlay" hidden aria-hidden="true" role="dialog" aria-label="Tracing complete">
+              <span class="celebrate-emoji" aria-hidden="true">✏️</span>
+              <p class="celebrate-title">Great tracing!</p>
+              <p class="celebrate-detail"></p>
+              <div class="celebrate-actions">
+                <button type="button" class="btn btn-secondary" data-celebrate-again>Try Again</button>
+                <button type="button" class="btn btn-primary" data-celebrate-new>Next Letter</button>
+              </div>
+            </div>
+
+            <details class="trace-parent-tips" id="trace-parent-tips">
+              <summary>For parents: how to help</summary>
+              <div class="trace-parent-tips-body">
+                <p class="trace-parent-glyph-label" id="trace-parent-glyph-label"></p>
+                <ol class="trace-parent-steps" id="trace-parent-steps"></ol>
+                <p class="trace-parent-coach" id="trace-parent-coach"></p>
+                <p class="trace-parent-encourage" id="trace-parent-encourage"></p>
+                <p class="trace-parent-credit">
+                  Stroke ideas follow common manuscript teaching (pull down, slide right, circle)
+                  used in programs like Zaner-Bloser, written here in plain language for little kids.
+                </p>
+              </div>
+            </details>
+          </section>
+
+          <section class="primary-actions" aria-label="Trace actions">
+            <button type="button" id="trace-btn-new" class="btn btn-primary">Random</button>
+            <button type="button" id="trace-btn-reset" class="btn btn-secondary">Start Over</button>
+            <button type="button" id="trace-btn-daily" class="btn btn-secondary">Daily Glyph</button>
+          </section>
+
           <section class="quick-controls" aria-label="Trace options">
             <div class="control-block">
               <p class="control-label">Type</p>
@@ -318,43 +355,6 @@
               <button type="button" id="trace-btn-prev" class="btn btn-secondary">← Previous</button>
               <button type="button" id="trace-btn-next" class="btn btn-primary">Next →</button>
             </div>
-          </section>
-
-          <section class="trace-panel" aria-label="Trace letters and numbers">
-            <p id="trace-daily-chip" class="trace-daily-chip" hidden>Daily glyph</p>
-            <div id="trace-stage" class="trace-stage"></div>
-            <p id="trace-status" class="trace-status">Pick a letter to trace</p>
-            <p id="trace-progress" class="trace-progress" aria-live="polite"></p>
-            <p id="trace-complete-banner" class="trace-complete-banner" hidden>Great tracing!</p>
-            <div id="trace-celebrate" class="celebrate-overlay" hidden aria-hidden="true" role="dialog" aria-label="Tracing complete">
-              <span class="celebrate-emoji" aria-hidden="true">✏️</span>
-              <p class="celebrate-title">Great tracing!</p>
-              <p class="celebrate-detail"></p>
-              <div class="celebrate-actions">
-                <button type="button" class="btn btn-secondary" data-celebrate-again>Try Again</button>
-                <button type="button" class="btn btn-primary" data-celebrate-new>Next Letter</button>
-              </div>
-            </div>
-
-            <details class="trace-parent-tips" id="trace-parent-tips">
-              <summary>For parents — how to help</summary>
-              <div class="trace-parent-tips-body">
-                <p class="trace-parent-glyph-label" id="trace-parent-glyph-label"></p>
-                <ol class="trace-parent-steps" id="trace-parent-steps"></ol>
-                <p class="trace-parent-coach" id="trace-parent-coach"></p>
-                <p class="trace-parent-encourage" id="trace-parent-encourage"></p>
-                <p class="trace-parent-credit">
-                  Stroke ideas follow common manuscript teaching (pull down, slide right, circle)
-                  used in programs like Zaner-Bloser — written here in plain language for little kids.
-                </p>
-              </div>
-            </details>
-          </section>
-
-          <section class="primary-actions" aria-label="Trace actions">
-            <button type="button" id="trace-btn-new" class="btn btn-primary">Random</button>
-            <button type="button" id="trace-btn-reset" class="btn btn-secondary">Start Over</button>
-            <button type="button" id="trace-btn-daily" class="btn btn-secondary">Daily Glyph</button>
           </section>
 
           <section class="toolbar" aria-label="Trace controls">
@@ -391,28 +391,12 @@
       <!-- Memory Match -->
       <div id="game-memory" class="game-panel" hidden>
         <main class="main">
-          <section class="quick-controls" aria-label="Memory options">
-            <div class="control-block">
-              <p class="control-label">Theme</p>
-              <div id="memory-categories" class="category-buttons" role="group" aria-label="Card theme"></div>
-            </div>
-            <div class="control-block">
-              <p class="control-label">Difficulty</p>
-              <div id="memory-difficulty" class="diff-buttons" role="group" aria-label="Difficulty" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
-                <button type="button" class="diff-btn" data-diff="easy" aria-pressed="false">Easy</button>
-                <button type="button" class="diff-btn is-active" data-diff="medium" aria-pressed="true">Medium</button>
-                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
-                <button type="button" class="diff-btn" data-diff="expert" aria-pressed="false">Expert</button>
-              </div>
-            </div>
-          </section>
-
           <section class="memory-panel" aria-label="Memory match">
             <p id="memory-status" class="memory-status">Tap a green card to flip it!</p>
             <div class="memory-stats" aria-live="polite">
               <span id="memory-flips">Flips: 0</span>
               <span id="memory-timer-display" class="timer-display">0:00.0</span>
-              <span id="memory-best-display" class="best-display">Best: —</span>
+              <span id="memory-best-display" class="best-display">Best: -</span>
             </div>
             <div id="memory-stage" class="memory-stage"></div>
             <p id="memory-float" class="memory-float" hidden>Nice!</p>
@@ -434,6 +418,22 @@
             <button type="button" id="memory-btn-daily" class="btn btn-secondary">Daily Match</button>
           </section>
 
+          <section class="quick-controls" aria-label="Memory options">
+            <div class="control-block">
+              <p class="control-label">Theme</p>
+              <div id="memory-categories" class="category-buttons" role="group" aria-label="Card theme"></div>
+            </div>
+            <div class="control-block">
+              <p class="control-label">Difficulty</p>
+              <div id="memory-difficulty" class="diff-buttons" role="group" aria-label="Difficulty" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
+                <button type="button" class="diff-btn" data-diff="easy" aria-pressed="false">Easy</button>
+                <button type="button" class="diff-btn is-active" data-diff="medium" aria-pressed="true">Medium</button>
+                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
+                <button type="button" class="diff-btn" data-diff="expert" aria-pressed="false">Expert</button>
+              </div>
+            </div>
+          </section>
+
           <section class="toolbar" aria-label="Memory controls">
             <div class="btn-row">
               <button type="button" id="memory-btn-share" class="btn btn-ghost">Share</button>
@@ -448,12 +448,12 @@
           </section>
 
           <details class="parent-tips">
-            <summary>For parents — how to help</summary>
+            <summary>For parents: how to help</summary>
             <div class="parent-tips-body">
-              <p>Start with Easy (2×2 — just 4 cards). Perfect for ages 2–3.</p>
+              <p>Start with Easy (2×2, just 4 cards). Perfect for ages 2–3.</p>
               <p>Animals and Colors themes work best for little ones who can’t read yet.</p>
-              <p>Let them take their time — memory improves with repetition, not speed.</p>
-              <p>The star rating is always encouraging — everyone gets at least one star.</p>
+              <p>Let them take their time: memory improves with repetition, not speed.</p>
+              <p>The star rating is always encouraging: everyone gets at least one star.</p>
               <p>Daily Match is a nice 2-minute morning routine.</p>
             </div>
           </details>
@@ -463,21 +463,6 @@
       <!-- Word Search -->
       <div id="game-search" class="game-panel" hidden>
         <main class="main">
-          <section class="quick-controls" aria-label="Word search options">
-            <div class="control-block">
-              <p class="control-label">Category</p>
-              <div id="search-categories" class="category-buttons" role="group" aria-label="Word category"></div>
-            </div>
-            <div class="control-block">
-              <p class="control-label">Difficulty</p>
-              <div id="search-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
-                <button type="button" class="diff-btn is-active" data-diff="easy" aria-pressed="true">Easy</button>
-                <button type="button" class="diff-btn" data-diff="medium" aria-pressed="false">Medium</button>
-                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
-              </div>
-            </div>
-          </section>
-
           <section class="search-panel" aria-label="Word search puzzle">
             <p id="search-status" class="search-status">Find the hidden words</p>
             <div id="search-preview" class="search-preview" aria-label="Words to find"></div>
@@ -499,6 +484,21 @@
             <button type="button" id="search-btn-new" class="btn btn-primary">New Puzzle</button>
             <button type="button" id="search-btn-reset" class="btn btn-secondary">Restart</button>
             <button type="button" id="search-btn-daily" class="btn btn-secondary">Daily Puzzle</button>
+          </section>
+
+          <section class="quick-controls" aria-label="Word search options">
+            <div class="control-block">
+              <p class="control-label">Category</p>
+              <div id="search-categories" class="category-buttons" role="group" aria-label="Word category"></div>
+            </div>
+            <div class="control-block">
+              <p class="control-label">Difficulty</p>
+              <div id="search-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
+                <button type="button" class="diff-btn is-active" data-diff="easy" aria-pressed="true">Easy</button>
+                <button type="button" class="diff-btn" data-diff="medium" aria-pressed="false">Medium</button>
+                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
+              </div>
+            </div>
           </section>
 
           <section class="toolbar" aria-label="Word search controls">
@@ -524,9 +524,9 @@
           Share the tool with others:
           <a
             id="share-shortlink"
-            href="https://bit.ly/mazeit"
-            data-share-url="https://bit.ly/mazeit"
-            >bit.ly/mazeit</a
+            href="https://myzoyna.com/"
+            data-share-url="https://myzoyna.com/"
+            >myzoyna.com</a
           >
         </p>
         <p class="footer-credits">
@@ -604,11 +604,11 @@
             </label>
             <label class="radio">
               <input type="radio" name="print-layout" value="4" />
-              Worksheet — 4 mazes (2×2)
+              Worksheet: 4 mazes (2×2)
             </label>
             <label class="radio">
               <input type="radio" name="print-layout" value="6" />
-              Worksheet — 6 mazes (2×3)
+              Worksheet: 6 mazes (2×3)
             </label>
           </fieldset>
         </div>
@@ -640,11 +640,11 @@
           </label>
           <label class="radio">
             <input type="radio" name="dots-print-layout" value="worksheet4" />
-            Worksheet — 4 puzzles (2×2)
+            Worksheet: 4 puzzles (2×2)
           </label>
           <label class="radio">
             <input type="radio" name="dots-print-layout" value="worksheet6" />
-            Worksheet — 6 puzzles (2×3)
+            Worksheet: 6 puzzles (2×3)
           </label>
         </fieldset>
 
@@ -684,11 +684,11 @@
           </label>
           <label class="radio">
             <input type="radio" name="trace-print-layout" value="worksheet4" />
-            Worksheet — 4 glyphs
+            Worksheet: 4 glyphs
           </label>
           <label class="radio">
             <input type="radio" name="trace-print-layout" value="worksheet6" />
-            Worksheet — 6 glyphs
+            Worksheet: 6 glyphs
           </label>
           <label class="radio">
             <input type="radio" name="trace-print-layout" value="pack-letters" />
@@ -731,7 +731,7 @@
           </label>
           <label class="radio">
             <input type="radio" name="search-print-layout" value="batch2" />
-            Worksheet — 2 puzzles
+            Worksheet: 2 puzzles
           </label>
         </fieldset>
         <fieldset class="print-fieldset">

@@ -38,8 +38,8 @@ const ICON_OPTIONS = [
 const THEME_KEY = "maze-theme";
 const THEME_LIGHT = "light";
 const THEME_DARK = "dark";
-const SHARE_SHORT_URL = "https://bit.ly/mazeit";
-const PRINT_CREDIT = "meetashok.github.io/maze · bit.ly/mazeit";
+const SHARE_SHORT_URL = "https://myzoyna.com/";
+const PRINT_CREDIT = "myzoyna.com";
 
 const HINT_STEPS = 4;
 
@@ -426,7 +426,7 @@ export class MazeApp {
       detail = `Time: ${formatTime(ms)}`;
       if (isNew) {
         this.els.recordBanner.hidden = false;
-        detail += " — New record!";
+        detail += " · New record!";
         setTimeout(() => {
           this.els.recordBanner.hidden = true;
         }, 3500);
@@ -543,12 +543,12 @@ export class MazeApp {
       detour: this.detour,
     });
 
-    // Open the native share sheet on mobile (same path as the bit.ly footer link).
+    // Open the native share sheet on mobile (same path as the footer share link).
     if (typeof navigator.share === "function") {
       try {
         await navigator.share({
           title: "Maze Play",
-          text: "Help the frog reach the bug — try this maze!",
+          text: "Help the frog reach the bug: try this maze!",
           url,
         });
         return;
@@ -564,7 +564,7 @@ export class MazeApp {
       try {
         await navigator.share({
           title: "Maze Play",
-          text: `Help the frog reach the bug — try this maze! ${url}`,
+          text: `Help the frog reach the bug: try this maze! ${url}`,
         });
         return;
       } catch (err) {
@@ -586,7 +586,7 @@ export class MazeApp {
       try {
         await navigator.share({
           title: "Maze Play",
-          text: "Help the frog reach the bug — try Maze Play!",
+          text: "Help the frog reach the bug: try Maze Play!",
           url,
         });
         return;
@@ -602,7 +602,7 @@ export class MazeApp {
     }
     try {
       await copyToClipboard(url);
-      this._toast("Link copied: bit.ly/mazeit");
+      this._toast("Link copied: myzoyna.com");
     } catch {
       window.open(url, "_blank", "noopener,noreferrer");
     }
@@ -650,7 +650,7 @@ export class MazeApp {
     const best = getPersonalBest(this.size);
     this.els.bestDisplay.textContent = best
       ? `Best: ${formatTime(best)}`
-      : "Best: —";
+      : "Best: -";
   }
 
   _buildIconGrid() {
@@ -808,7 +808,7 @@ export class MazeApp {
     title.className = "print-title";
     title.textContent =
       pageLabel ||
-      `Maze Puzzle — ${difficultyLabel(size)} (${size}×${size}) · ${detourLabel(detour)}`;
+      `Maze Puzzle: ${difficultyLabel(size)} (${size}×${size}) · ${detourLabel(detour)}`;
     page.appendChild(title);
 
     const maze = generateMaze(size, seed, detour);
@@ -864,7 +864,7 @@ export class MazeApp {
               seed,
               detour: this.detour,
               withSolution,
-              pageLabel: `Maze Puzzle — ${difficultyLabel(size)} (${size}×${size}) · ${detourLabel(this.detour)} (#${pageIndex})`,
+              pageLabel: `Maze Puzzle: ${difficultyLabel(size)} (${size}×${size}) · ${detourLabel(this.detour)} (#${pageIndex})`,
             })
           );
         }
@@ -894,7 +894,7 @@ export class MazeApp {
             seed: this.seed,
             detour: this.detour,
             withSolution,
-            pageLabel: `Maze Puzzle — ${difficultyLabel(this.size)} (${this.size}×${this.size}) · ${detourLabel(this.detour)}`,
+            pageLabel: `Maze Puzzle: ${difficultyLabel(this.size)} (${this.size}×${this.size}) · ${detourLabel(this.detour)}`,
           })
         );
       } else {
@@ -902,7 +902,7 @@ export class MazeApp {
         page.className = "print-page print-page-worksheet";
         const title = document.createElement("h1");
         title.className = "print-title";
-        title.textContent = `Maze Worksheets — ${count} puzzles`;
+        title.textContent = `Maze Worksheets: ${count} puzzles`;
         page.appendChild(title);
 
         const grid = document.createElement("div");

@@ -1,5 +1,5 @@
 /**
- * Lightweight Web Audio SFX — no asset files.
+ * Lightweight Web Audio SFX  -  no asset files.
  * Respects a localStorage mute preference.
  */
 
@@ -92,7 +92,7 @@ export function bindSoundToggle(btn) {
     const on = isSoundOn();
     btn.setAttribute("aria-pressed", on ? "true" : "false");
     btn.textContent = on ? "🔊" : "🔇";
-    btn.title = on ? "Sound on — tap to mute" : "Sound muted — tap to unmute";
+    btn.title = on ? "Sound on" : "Sound off";
     btn.setAttribute("aria-label", on ? "Mute sound" : "Unmute sound");
   };
   sync();

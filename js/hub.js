@@ -1,5 +1,5 @@
 /**
- * Game Hub — landing page, navigation, and shared shell.
+ * Game Hub  -  landing page, navigation, and shared shell.
  *
  * URLs: / (home) · /maze · /connect · /trace · /memory · /search
  */
@@ -33,7 +33,7 @@ export const GAMES = {
     short: "Mazes",
     emoji: "🟩",
     tagline: "Help the frog reach the bug",
-    description: "Kid-friendly maze puzzles — play, print, and share.",
+    description: "Kid-friendly maze puzzles: play, print, and share.",
     howto: "Trace a path so the frog can eat the bug. Drag backward to undo.",
     cardBlurb: "Help the frog escape!",
   },
@@ -50,8 +50,8 @@ export const GAMES = {
     title: "Trace Letters & Numbers",
     short: "Trace ABC",
     emoji: "✏️",
-    tagline: "Follow the dashes — letters & numbers",
-    description: "Trace letters and numbers — practice online or print worksheets.",
+    tagline: "Follow the dashes: letters & numbers",
+    description: "Trace letters and numbers: practice online or print worksheets.",
     howto: "Start at the glowing green dot and follow each dashed stroke. Print packs for crayon practice!",
     cardBlurb: "Learn to write letters!",
   },
@@ -59,8 +59,8 @@ export const GAMES = {
     title: "Memory Match",
     short: "Memory",
     emoji: "🃏",
-    tagline: "Flip cards — find the pairs",
-    description: "A card-matching memory game for little kids — tap to flip, find the pairs.",
+    tagline: "Flip cards: find the pairs",
+    description: "A card-matching memory game for little kids: tap to flip, find the pairs.",
     howto: "Flip two cards. If they match, they stay up. Find every pair!",
     cardBlurb: "Match pairs to train your memory!",
   },
@@ -69,7 +69,7 @@ export const GAMES = {
     short: "Word Search",
     emoji: "🔍",
     tagline: "Find the hidden words",
-    description: "Kid-friendly word search puzzles — play online or print worksheets.",
+    description: "Kid-friendly word search puzzles: play online or print worksheets.",
     howto: "Drag across letters to find each word in the list.",
     cardBlurb: "Find hidden words in the grid!",
   },
@@ -78,7 +78,7 @@ export const GAMES = {
 const HOME_META = {
   title: "Puzzle Play",
   tagline: "Pick a game and play!",
-  description: "Kid-friendly puzzle games — mazes, dots, tracing, memory, and word search!",
+  description: "Kid-friendly puzzle games: mazes, dots, tracing, memory, and word search!",
   howto: "Choose a game below. Tap the home button any time to come back here.",
 };
 
@@ -163,6 +163,7 @@ class GameHub {
       themeToggle: $("theme-toggle"),
       soundToggle: $("sound-toggle"),
       homeBtn: $("nav-home"),
+      brandHome: $("brand-home"),
       nav: $("game-nav"),
       primary: $("game-nav-primary"),
       landing: $("game-home"),
@@ -225,6 +226,7 @@ class GameHub {
 
   _bindNav() {
     this.els.homeBtn?.addEventListener("click", () => this._switchGame("home"));
+    this.els.brandHome?.addEventListener("click", () => this._switchGame("home"));
   }
 
   _syncNavActive(game) {
@@ -283,7 +285,7 @@ class GameHub {
     if (next === "home") {
       if (this.els.brand) this.els.brand.textContent = HOME_META.title;
       if (this.els.tagline) this.els.tagline.textContent = HOME_META.tagline;
-      document.title = `${HOME_META.title} — Mazes, Dots & More`;
+      document.title = `${HOME_META.title}: Mazes, Dots & More`;
       if (this.els.footerHowto) this.els.footerHowto.textContent = HOME_META.howto;
       const desc = document.querySelector('meta[name="description"]');
       if (desc) desc.content = HOME_META.description;
@@ -293,7 +295,7 @@ class GameHub {
     const meta = GAMES[next];
     if (this.els.brand) this.els.brand.textContent = meta.title;
     if (this.els.tagline) this.els.tagline.textContent = meta.tagline;
-    document.title = `${meta.title} — Puzzle Play`;
+    document.title = `${meta.title} · Puzzle Play`;
 
     if (this.els.footerHowto) {
       this.els.footerHowto.textContent = meta.howto;
