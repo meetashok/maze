@@ -1,5 +1,7 @@
 /**
- * Pattern Play — what comes next in an emoji sequence.
+ * Pattern Play — what comes next, using real preschool pattern cores.
+ * Easy: AB · Medium: AAB / ABB / ABC · Hard: AABB / grow
+ * Always shows at least two full units before the blank.
  */
 
 import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
@@ -14,17 +16,39 @@ import {
 } from "./common.js";
 
 const TOTAL_ROUNDS = 5;
-const ANSWER_PAUSE_MS = 700;
-const COLORS = ["🔴", "🔵", "🟢", "🟡", "🟠", "🟣"];
-const SHAPES = ["⭐", "🌙", "☀️", "❤️", "💎", "🔺"];
-const ANIMALS = ["🐶", "🐱", "🐻", "🐸", "🦊", "🐼"];
-const FRUITS = ["🍎", "🍌", "🍇", "🍊", "🍓", "🍑"];
-const ALL = [...COLORS, ...SHAPES, ...ANIMALS, ...FRUITS];
+const ANSWER_PAUSE_MS = 900;
+const DEAL_MS = 480;
 
+const COLORS = [
+  { emoji: "🔴", name: "red" },
+  { emoji: "🔵", name: "blue" },
+  { emoji: "🟢", name: "green" },
+  { emoji: "🟡", name: "yellow" },
+  { emoji: "🟠", name: "orange" },
+  { emoji: "🟣", name: "purple" },
+];
+const SHAPES = [
+  { emoji: "⭐", name: "star" },
+  { emoji: "❤️", name: "heart" },
+  { emoji: "🔺", name: "triangle" },
+  { emoji: "🟦", name: "square" },
+  { emoji: "⬜", name: "white square" },
+  { emoji: "⬛", name: "black square" },
+];
+const ANIMALS = [
+  { emoji: "🐶", name: "dog" },
+  { emoji: "🐱", name: "cat" },
+  { emoji: "🐸", name: "frog" },
+  { emoji: "🦊", name: "fox" },
+  { emoji: "🐻", name: "bear" },
+  { emoji: "🐼", name: "panda" },
+];
+
+/** @type {Record<string, { types: string[], unitsShown: number }>} */
 export const PATTERN_DIFFICULTY = {
-  easy: { types: ["alternate", "repeat"], length: 4 },
-  medium: { types: ["alternate", "repeat", "aba"], length: 5 },
-  hard: { types: ["aba", "abab", "grow", "repeat"], length: 5 },
+  easy: { types: ["AB"], unitsShown: 2 },
+  medium: { types: ["AAB", "ABB", "ABC"], unitsShown: 2 },
+  hard: { types: ["AABB", "ABC", "grow"], unitsShown: 2 },
 };
 
 function randInt(rand, n) {
@@ -41,87 +65,125 @@ function shuffle(arr, rand) {
   }
   return a;
 }
-function twoDistinct(pool, rand) {
-  const a = pick(pool, rand);
-  let b = pick(pool, rand);
-  while (b === a) b = pick(pool, rand);
-  return [a, b];
+function pickDistinct(pool, n, rand) {
+  const shuffled = shuffle(pool, rand);
+  return shuffled.slice(0, n);
 }
+function prefersReducedMotion() {
+  return typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function buildChoices(answer, distractors, rand) {
-  const unique = [answer, ...distractors.filter((d) => d !== answer)];
+  const unique = [];
+  for (const d of [answer, ...distractors]) {
+    if (d && !unique.includes(d)) unique.push(d);
+  }
+  const pool = [...COLORS, ...SHAPES, ...ANIMALS].map((x) => x.emoji);
   while (unique.length < 3) {
-    const extra = pick(ALL, rand);
+    const extra = pick(pool, rand);
     if (!unique.includes(extra)) unique.push(extra);
   }
   const choices = shuffle(unique.slice(0, 3), rand);
   return { choices, correctIndex: choices.indexOf(answer) };
 }
 
-function makeAlternate(rand, length) {
-  const [a, b] = twoDistinct(COLORS, rand);
-  const prompt = Array.from({ length: length - 1 }, (_, i) => (i % 2 === 0 ? a : b));
-  const answer = (length - 1) % 2 === 0 ? a : b;
-  return { type: "alternate", prompt, answer, ...buildChoices(answer, [b, COLORS[0]], rand) };
-}
-
-function makeRepeat(rand, length) {
-  const pool = pick([SHAPES, ANIMALS, FRUITS], rand);
-  const unitLen = length <= 4 ? 2 : 2 + randInt(rand, 2);
-  const unit = [];
-  for (let i = 0; i < unitLen; i++) {
-    let next = pick(pool, rand);
-    while (unit.includes(next)) next = pick(pool, rand);
-    unit.push(next);
+function makeFromUnit(type, unitItems, unitsShown, rand) {
+  const unit = unitItems.map((x) => x.emoji);
+  const names = unitItems.map((x) => x.name);
+  const prompt = [];
+  for (let i = 0; i < unitsShown; i++) prompt.push(...unit);
+  const answer = unit[0];
+  const ruleSpoken = `${names.join(", ")}, ${names.join(", ")}…`;
+  const distractors = unit.filter((e) => e !== answer);
+  while (distractors.length < 2) {
+    const extra = pick([...COLORS, ...SHAPES], rand).emoji;
+    if (!unit.includes(extra) && !distractors.includes(extra)) distractors.push(extra);
   }
-  const prompt = Array.from({ length: length - 1 }, (_, i) => unit[i % unitLen]);
-  const answer = unit[(length - 1) % unitLen];
   return {
-    type: "repeat",
+    type,
+    unit,
     prompt,
     answer,
-    ...buildChoices(answer, pool.filter((x) => x !== answer).slice(0, 2), rand),
+    ruleLabel: type,
+    hint: `Listen: ${ruleSpoken}`,
+    ...buildChoices(answer, distractors, rand),
   };
 }
 
-function makeAba(rand, length, abab) {
-  const pool = pick([ANIMALS, FRUITS, SHAPES], rand);
-  const [a, b] = twoDistinct(pool, rand);
-  const cycle = abab ? [a, b] : [a, b, a];
-  const prompt = Array.from({ length: length - 1 }, (_, i) => cycle[i % cycle.length]);
-  const answer = cycle[(length - 1) % cycle.length];
-  return {
-    type: abab ? "abab" : "aba",
-    prompt,
-    answer,
-    ...buildChoices(answer, [a, b, pick(pool, rand)], rand),
-  };
+function makeAB(rand, unitsShown) {
+  const pool = pick([COLORS, SHAPES], rand);
+  const [a, b] = pickDistinct(pool, 2, rand);
+  return makeFromUnit("AB", [a, b], unitsShown, rand);
 }
 
-function makeGrow(rand, length) {
-  const emoji = pick(SHAPES, rand);
-  const prompt = Array.from({ length: length - 1 }, (_, i) => emoji.repeat(1 + i));
-  const answer = emoji.repeat(length);
+function makeAAB(rand, unitsShown) {
+  const pool = pick([COLORS, SHAPES, ANIMALS], rand);
+  const [a, b] = pickDistinct(pool, 2, rand);
+  return makeFromUnit("AAB", [a, a, b], unitsShown, rand);
+}
+
+function makeABB(rand, unitsShown) {
+  const pool = pick([COLORS, SHAPES, ANIMALS], rand);
+  const [a, b] = pickDistinct(pool, 2, rand);
+  return makeFromUnit("ABB", [a, b, b], unitsShown, rand);
+}
+
+function makeABC(rand, unitsShown) {
+  const pool = pick([COLORS, SHAPES], rand);
+  const [a, b, c] = pickDistinct(pool, 3, rand);
+  return makeFromUnit("ABC", [a, b, c], unitsShown, rand);
+}
+
+function makeAABB(rand, unitsShown) {
+  const pool = pick([COLORS, SHAPES], rand);
+  const [a, b] = pickDistinct(pool, 2, rand);
+  return makeFromUnit("AABB", [a, a, b, b], unitsShown, rand);
+}
+
+/** Growing count of one emoji — each cell is a clearer count label + emoji. */
+function makeGrow(rand) {
+  const item = pick(COLORS, rand);
+  const prompt = [1, 2, 3].map((n) => item.emoji.repeat(n));
+  const answer = item.emoji.repeat(4);
   return {
     type: "grow",
+    unit: [item.emoji],
     prompt,
     answer,
-    ...buildChoices(answer, [emoji.repeat(length + 1), emoji.repeat(Math.max(1, length - 1))], rand),
+    ruleLabel: "grow",
+    hint: `It grows by one ${item.name} each time`,
+    ...buildChoices(answer, [item.emoji.repeat(5), item.emoji.repeat(2), item.emoji], rand),
   };
 }
 
-/** Pure / DOM-free round for smoke tests. */
-export function buildPatternRound(seed, difficulty = "easy") {
+function makeByType(type, unitsShown, rand) {
+  if (type === "AB") return makeAB(rand, unitsShown);
+  if (type === "AAB") return makeAAB(rand, unitsShown);
+  if (type === "ABB") return makeABB(rand, unitsShown);
+  if (type === "ABC") return makeABC(rand, unitsShown);
+  if (type === "AABB") return makeAABB(rand, unitsShown);
+  return makeGrow(rand);
+}
+
+/**
+ * Pure round builder. Optional `avoidKeys` skips recently used type+unit signatures.
+ * @param {number} seed
+ * @param {string} difficulty
+ * @param {{ avoidKeys?: string[] }} [opts]
+ */
+export function buildPatternRound(seed, difficulty = "easy", opts = {}) {
   const diff = PATTERN_DIFFICULTY[difficulty] || PATTERN_DIFFICULTY.easy;
   const rand = mulberry32(seed >>> 0 || 1);
-  const type = pick(diff.types, rand);
-  const length = diff.length;
-  let round;
-  if (type === "alternate") round = makeAlternate(rand, length);
-  else if (type === "repeat") round = makeRepeat(rand, length);
-  else if (type === "grow") round = makeGrow(rand, length);
-  else if (type === "abab") round = makeAba(rand, length, true);
-  else round = makeAba(rand, length, false);
-  return { seed: seed >>> 0, difficulty, ...round };
+  const avoid = new Set(opts.avoidKeys || []);
+  let round = null;
+  let key = "";
+  for (let attempt = 0; attempt < 24; attempt++) {
+    const type = pick(diff.types, rand);
+    round = makeByType(type, diff.unitsShown, rand);
+    key = `${round.type}:${round.unit.join("")}`;
+    if (!avoid.has(key) || avoid.size >= 12) break;
+  }
+  return { seed: seed >>> 0, difficulty, key, ...round };
 }
 
 export class PatternApp {
@@ -133,8 +195,10 @@ export class PatternApp {
     this.round = null;
     this.lock = false;
     this.completed = false;
+    this.usedKeys = [];
     this._stopCelebrate = null;
     this._answerTimer = 0;
+    this._dealTimer = 0;
     this.els = {};
   }
 
@@ -206,25 +270,33 @@ export class PatternApp {
     this._stopCelebrate = null;
     hideCelebrationOverlay(this.els.celebrate);
     clearTimeout(this._answerTimer);
+    clearTimeout(this._dealTimer);
     this.sessionSeed = seed >>> 0 || 1;
     this.roundIndex = 0;
     this.score = 0;
     this.lock = false;
     this.completed = false;
+    this.usedKeys = [];
     this._loadRound({ sync });
   }
 
   _loadRound({ sync = true } = {}) {
-    this.round = buildPatternRound(deriveSeed(this.sessionSeed, this.roundIndex), this.difficulty);
+    this.round = buildPatternRound(deriveSeed(this.sessionSeed, this.roundIndex), this.difficulty, {
+      avoidKeys: this.usedKeys,
+    });
+    if (this.round.key) this.usedKeys.push(this.round.key);
     this.lock = false;
     this._updateScore();
     this._updateStatus();
     this._render();
+    this._playDeal();
     if (sync) this._syncUrl();
   }
 
   _updateScore() {
-    if (this.els.score) this.els.score.textContent = `Score: ${this.score}/${TOTAL_ROUNDS}`;
+    if (this.els.score) {
+      this.els.score.textContent = `Round ${Math.min(this.roundIndex + 1, TOTAL_ROUNDS)} of ${TOTAL_ROUNDS} · Score ${this.score}`;
+    }
   }
 
   _updateStatus(msg) {
@@ -233,9 +305,29 @@ export class PatternApp {
       this.els.status.textContent = msg;
       return;
     }
-    this.els.status.textContent = this.completed
-      ? "You finished all the patterns!"
-      : `Round ${this.roundIndex + 1} of ${TOTAL_ROUNDS} — What comes next?`;
+    if (this.completed) {
+      this.els.status.textContent = "You finished all the patterns!";
+      return;
+    }
+    const hint = this.round?.hint ? ` ${this.round.hint}` : "";
+    this.els.status.textContent = `What comes next?${hint}`;
+  }
+
+  _playDeal() {
+    const stage = this.els.stage;
+    const choices = this.els.choices;
+    if (!stage) return;
+    if (prefersReducedMotion()) return;
+    stage.classList.remove("is-dealing");
+    choices?.classList.remove("is-dealing");
+    void stage.offsetWidth;
+    stage.classList.add("is-dealing");
+    choices?.classList.add("is-dealing");
+    clearTimeout(this._dealTimer);
+    this._dealTimer = setTimeout(() => {
+      stage.classList.remove("is-dealing");
+      choices?.classList.remove("is-dealing");
+    }, DEAL_MS);
   }
 
   _render() {
@@ -293,10 +385,10 @@ export class PatternApp {
       this.score += 1;
       playPop();
       this._updateScore();
-      this._updateStatus("Nice! That's right!");
+      this._updateStatus(`Yes! ${this.round.hint || "That's the pattern."}`);
     } else {
       playBonk();
-      this._updateStatus("Oops — try the next one!");
+      this._updateStatus(`It was ${this.round.answer}. ${this.round.hint || ""}`);
     }
     clearTimeout(this._answerTimer);
     this._answerTimer = setTimeout(() => this._nextAfterAnswer(), ANSWER_PAUSE_MS);
@@ -316,7 +408,7 @@ export class PatternApp {
     this._updateStatus();
     this._stopCelebrate = celebrate(document.body, 3200);
     showCelebrationOverlay(this.els.celebrate, {
-      emoji: "🧩",
+      emoji: "🔁",
       message: "Pattern master!",
       detail: `Score: ${this.score}/${TOTAL_ROUNDS} · ${this.difficulty}`,
       againLabel: "Play Again",

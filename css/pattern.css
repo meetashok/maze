@@ -153,6 +153,48 @@
   opacity: 0.95;
 }
 
+.pattern-stage.is-dealing .pattern-item,
+.pattern-choices.is-dealing .pattern-choice {
+  animation: pattern-deal 0.42s ease-out both;
+}
+
+.pattern-stage.is-dealing .pattern-item:nth-child(1),
+.pattern-choices.is-dealing .pattern-choice:nth-child(1) { animation-delay: 0ms; }
+.pattern-stage.is-dealing .pattern-item:nth-child(2),
+.pattern-choices.is-dealing .pattern-choice:nth-child(2) { animation-delay: 35ms; }
+.pattern-stage.is-dealing .pattern-item:nth-child(3),
+.pattern-choices.is-dealing .pattern-choice:nth-child(3) { animation-delay: 70ms; }
+.pattern-stage.is-dealing .pattern-item:nth-child(4),
+.pattern-choices.is-dealing .pattern-choice:nth-child(4) { animation-delay: 105ms; }
+.pattern-stage.is-dealing .pattern-item:nth-child(5),
+.pattern-choices.is-dealing .pattern-choice:nth-child(5) { animation-delay: 140ms; }
+.pattern-stage.is-dealing .pattern-item:nth-child(6) { animation-delay: 175ms; }
+.pattern-stage.is-dealing .pattern-item:nth-child(7) { animation-delay: 210ms; }
+.pattern-stage.is-dealing .pattern-item:nth-child(8) { animation-delay: 245ms; }
+.pattern-stage.is-dealing .pattern-item:nth-child(9) { animation-delay: 280ms; }
+
+@keyframes pattern-deal {
+  0% {
+    transform: translate3d(0, 10px, 0) scale(0.86);
+    opacity: 0.35;
+  }
+  55% {
+    transform: translate3d(-3px, -2px, 0) rotate(-2deg) scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pattern-stage.is-dealing .pattern-item,
+  .pattern-choices.is-dealing .pattern-choice {
+    animation: none;
+  }
+}
+
 [data-theme="dark"] .pattern-item {
   background: var(--floor);
   border-color: rgba(62, 207, 190, 0.35);
