@@ -469,20 +469,38 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
 // Pattern + Odd One Out
 {
   const p = buildPatternRound(42, "easy");
-  assert(Array.isArray(p.prompt) && p.prompt.length >= 3, "pattern prompt length");
+  assert(Array.isArray(p.prompt) && p.prompt.length >= 4, "pattern shows at least two AB units");
+  assert(p.type === "AB", "easy pattern is AB");
   assert(Array.isArray(p.choices) && p.choices.length === 3, "pattern has 3 choices");
   assert(p.choices.includes(p.answer), "pattern answer in choices");
+  assert(typeof p.hint === "string" && p.hint.length > 0, "pattern has spoken hint");
+  assert(PATTERN_DIFFICULTY.medium.types.includes("AAB"), "medium has AAB");
   assert(PATTERN_DIFFICULTY.hard.types.includes("grow"), "hard pattern has grow type");
   const p2 = buildPatternRound(42, "easy");
   assert(JSON.stringify(p) === JSON.stringify(p2), "pattern round deterministic");
+  const med = buildPatternRound(99, "medium");
+  assert(["AAB", "ABB", "ABC"].includes(med.type), "medium uses AAB/ABB/ABC");
+  const a1 = buildPatternRound(1, "easy");
+  const a2 = buildPatternRound(2, "easy", { avoidKeys: [a1.key] });
+  assert(a1.key !== a2.key || a1.unit.join("") !== a2.unit.join(""), "pattern can avoid recent keys when possible");
 
   const o = buildOddRound(7, "easy");
   assert(o.tiles.length === 4, "odd round has 4 tiles");
   assert(o.tiles.filter((t) => t.isOdd).length === 1, "odd round has one odd tile");
   assert(typeof o.oddIndex === "number" && o.tiles[o.oddIndex].isOdd, "oddIndex points to odd tile");
+  assert(typeof o.reason === "string" && o.reason.length > 0, "odd round explains why");
+  assert(typeof o.id === "string", "odd round has id");
   const o2 = buildOddRound(7, "easy");
   assert(JSON.stringify(o) === JSON.stringify(o2), "odd round deterministic");
-  assert(Object.keys(ODD_DIFFICULTY).length === 3, "odd difficulties");
+  assert(ODD_DIFFICULTY.easy.length >= 10, "easy odd bank is large");
+  assert(ODD_DIFFICULTY.medium.length >= 10, "medium odd bank is large");
+  assert(ODD_DIFFICULTY.hard.length >= 10, "hard odd bank is large");
+  const ids = new Set();
+  for (let i = 0; i < 5; i++) {
+    const r = buildOddRound(1000 + i, "easy", { avoidIds: [...ids] });
+    assert(!ids.has(r.id), `odd session avoids repeat ${r.id}`);
+    ids.add(r.id);
+  }
 }
 
 // Trace words + memory themes

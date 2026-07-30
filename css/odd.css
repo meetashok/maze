@@ -105,6 +105,36 @@
   filter: saturate(0.85);
 }
 
+.odd-stage.is-dealing {
+  pointer-events: none;
+}
+
+.odd-stage.is-dealing .odd-tile {
+  animation: odd-deal 0.42s ease-out both;
+  animation-delay: var(--deal-delay, 0ms);
+}
+
+@keyframes odd-deal {
+  0% {
+    transform: translate3d(0, 12px, 0) scale(0.88);
+    opacity: 0.4;
+  }
+  45% {
+    transform: translate3d(-4px, -2px, 0) rotate(-3deg) scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, 0, 0) rotate(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .odd-stage.is-dealing .odd-tile {
+    animation: none;
+  }
+}
+
 @media (pointer: coarse) {
   .odd-tile {
     min-width: 72px;
