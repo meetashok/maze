@@ -585,9 +585,9 @@
         <main class="main">
           <section class="odd-panel" aria-label="Odd one out puzzle">
             <p id="odd-status" class="odd-status">Tap the one that does not belong</p>
-            <p id="odd-score" class="odd-score">Puzzle 1 of 5</p>
+            <p id="odd-score" class="odd-score">Puzzle 1</p>
             <div id="odd-stage" class="odd-stage" role="group" aria-label="Odd one out choices"></div>
-            <div id="odd-celebrate" class="celebrate-overlay" hidden aria-hidden="true" role="dialog" aria-label="Odd one out complete">
+            <div id="odd-celebrate" class="celebrate-overlay" hidden aria-hidden="true" role="status" aria-label="Odd one out milestone">
               <span class="celebrate-emoji" aria-hidden="true">🎯</span>
               <p class="celebrate-title">Sharp eyes!</p>
               <p class="celebrate-detail"></p>
@@ -600,16 +600,6 @@
           <section class="primary-actions" aria-label="Odd one out actions">
             <button type="button" id="odd-btn-new" class="btn btn-primary">New Game</button>
             <button type="button" id="odd-btn-reset" class="btn btn-secondary">Restart</button>
-          </section>
-          <section class="quick-controls" aria-label="Odd one out options">
-            <div class="control-block">
-              <p class="control-label">Difficulty</p>
-              <div id="odd-difficulty" class="diff-buttons" role="group" aria-label="Difficulty">
-                <button type="button" class="diff-btn is-active" data-diff="easy" aria-pressed="true">Easy</button>
-                <button type="button" class="diff-btn" data-diff="medium" aria-pressed="false">Medium</button>
-                <button type="button" class="diff-btn" data-diff="hard" aria-pressed="false">Hard</button>
-              </div>
-            </div>
           </section>
         </main>
       </div>

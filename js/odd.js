@@ -1,6 +1,6 @@
 /**
  * Odd One Out — find the item that does not belong.
- * Easy: clear category · Medium: closer categories · Hard: same family, one attribute differs
+ * One mixed bank: clear category mismatches, closer categories, and spot-the-difference.
  */
 
 import { celebrate, showCelebrationOverlay, hideCelebrationOverlay } from "./confetti.js";
@@ -16,14 +16,15 @@ import {
 
 const MILESTONE_EVERY = 5;
 const MILESTONE_MS = 1600;
-const AVOID_RECENT = 10;
+const AVOID_RECENT = 12;
 const ANSWER_PAUSE_MS = 480;
 const REVEAL_PAUSE_MS = 1100;
 const DEAL_MS = 480;
 const MAX_WRONG_TRIES = 3;
 
-/** Category mode: three from match, one from odd. */
-const EASY_SETS = [
+/** All puzzle faces in one pool (formerly easy / medium / hard). */
+export const ODD_SETS = [
+  // Clear category mismatches
   { id: "cars-dog", match: ["🚗", "🚕", "🚙"], odd: ["🐶"], reason: "Dog is not a car" },
   { id: "dogs-car", match: ["🐶", "🐕", "🦮"], odd: ["🚗"], reason: "Car is not a dog" },
   { id: "fruit-plane", match: ["🍎", "🍌", "🍇"], odd: ["✈️"], reason: "Plane is not fruit" },
@@ -46,9 +47,7 @@ const EASY_SETS = [
   { id: "veggies-star", match: ["🥕", "🌽", "🥦"], odd: ["⭐"], reason: "Star is not a veggie" },
   { id: "clocks-frog", match: ["⏰", "🕰️", "⌚"], odd: ["🐸"], reason: "Frog is not a clock" },
   { id: "moons-pizza", match: ["🌙", "🌛", "🌜"], odd: ["🍕"], reason: "Pizza is not a moon" },
-];
-
-const MEDIUM_SETS = [
+  // Closer category contrasts
   { id: "fruit-veg", match: ["🍎", "🍌", "🍇"], odd: ["🥕"], reason: "Carrot is a veggie, not a fruit" },
   { id: "veg-fruit", match: ["🥕", "🌽", "🥦"], odd: ["🍓"], reason: "Strawberry is a fruit" },
   { id: "land-water", match: ["🐶", "🐱", "🐻"], odd: ["🐟"], reason: "Fish lives in water" },
@@ -73,10 +72,7 @@ const MEDIUM_SETS = [
   { id: "tools-toys", match: ["🔨", "🔧", "🪚"], odd: ["🧸"], reason: "Teddy is a toy, not a tool" },
   { id: "space-earth", match: ["🚀", "🛸", "🛰️"], odd: ["🌳"], reason: "Tree is on Earth, not in space" },
   { id: "music-sports", match: ["🎵", "🎶", "🎼"], odd: ["⚽"], reason: "Ball is sports, not music" },
-];
-
-/** Hard: three identical (or near-identical), one differs by one attribute. */
-const HARD_SETS = [
+  // Spot-the-difference (same item, one attribute)
   { id: "red-vs-blue", match: ["🔴", "🔴", "🔴"], odd: ["🔵"], reason: "Blue is a different color" },
   { id: "green-vs-yellow", match: ["🟢", "🟢", "🟢"], odd: ["🟡"], reason: "Yellow is a different color" },
   { id: "purple-vs-orange", match: ["🟣", "🟣", "🟣"], odd: ["🟠"], reason: "Orange is a different color" },
@@ -101,11 +97,8 @@ const HARD_SETS = [
   { id: "hand-vs-point", match: ["✋", "✋", "✋"], odd: ["👉"], reason: "That hand is pointing" },
 ];
 
-export const ODD_DIFFICULTY = {
-  easy: EASY_SETS,
-  medium: MEDIUM_SETS,
-  hard: HARD_SETS,
-};
+/** @deprecated Use ODD_SETS — kept so older imports keep working. */
+export const ODD_DIFFICULTY = { all: ODD_SETS };
 
 function randInt(rand, n) {
   return Math.floor(rand() * n);
@@ -126,14 +119,20 @@ function prefersReducedMotion() {
 }
 
 /**
+ * Pure round builder. Optional `avoidIds` skips recently used faces.
+ * Second arg used to be a difficulty string; it is ignored (mixed bank).
  * @param {number} seed
- * @param {string} difficulty
+ * @param {string | { avoidIds?: string[] }} [difficultyOrOpts]
  * @param {{ avoidIds?: string[] }} [opts]
  */
-export function buildOddRound(seed, difficulty = "easy", opts = {}) {
-  const sets = ODD_DIFFICULTY[difficulty] || ODD_DIFFICULTY.easy;
+export function buildOddRound(seed, difficultyOrOpts = {}, opts = {}) {
+  const options =
+    difficultyOrOpts && typeof difficultyOrOpts === "object" && !Array.isArray(difficultyOrOpts)
+      ? difficultyOrOpts
+      : opts;
+  const sets = ODD_SETS;
   const rand = mulberry32(seed >>> 0 || 1);
-  const avoid = new Set(opts.avoidIds || []);
+  const avoid = new Set(options.avoidIds || []);
   const pool = sets.filter((s) => !avoid.has(s.id));
   const set = pick(pool.length ? pool : sets, rand);
   const matchEmojis = shuffle(set.match, rand).slice(0, 3);
@@ -150,7 +149,6 @@ export function buildOddRound(seed, difficulty = "easy", opts = {}) {
   );
   return {
     seed: seed >>> 0,
-    difficulty,
     id: set.id,
     reason: set.reason,
     tiles,
@@ -160,7 +158,6 @@ export function buildOddRound(seed, difficulty = "easy", opts = {}) {
 
 export class OddApp {
   constructor() {
-    this.difficulty = "easy";
     this.sessionSeed = 1;
     this.roundIndex = 0;
     this.solvedCount = 0;
@@ -177,7 +174,6 @@ export class OddApp {
   async init() {
     this._cacheEls();
     this._bindControls();
-    this._syncDifficulty();
     const { game, params } = parseGameHash();
     if (game === "odd") this.onHashChange(params);
     else this._newGame({ sync: false });
@@ -190,38 +186,18 @@ export class OddApp {
       status: $("odd-status"),
       btnNew: $("odd-btn-new"),
       btnReset: $("odd-btn-reset"),
-      difficulty: $("odd-difficulty"),
       celebrate: $("odd-celebrate"),
       score: $("odd-score"),
     };
   }
 
   _bindControls() {
-    this.els.difficulty?.querySelectorAll(".diff-btn").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (btn.dataset.diff === this.difficulty) return;
-        this.difficulty = btn.dataset.diff;
-        this._syncDifficulty();
-        this._newGame();
-      });
-    });
     this.els.btnNew?.addEventListener("click", () => this._newGame());
     this.els.btnReset?.addEventListener("click", () => this._restart());
   }
 
-  _syncDifficulty() {
-    this.els.difficulty?.querySelectorAll(".diff-btn").forEach((btn) => {
-      const on = btn.dataset.diff === this.difficulty;
-      btn.classList.toggle("is-active", on);
-      btn.setAttribute("aria-pressed", on ? "true" : "false");
-    });
-  }
-
   onHashChange(params) {
     if (!(params instanceof URLSearchParams)) params = new URLSearchParams(params || "");
-    const diff = params.get("diff");
-    if (diff && ODD_DIFFICULTY[diff]) this.difficulty = diff;
-    this._syncDifficulty();
     const seedRaw = parseInt(params.get("seed"), 10);
     const seed =
       Number.isFinite(seedRaw) && seedRaw > 0 ? seedRaw >>> 0 : (Math.random() * 0xffffffff) >>> 0;
@@ -252,7 +228,7 @@ export class OddApp {
   }
 
   _loadRound({ sync = true } = {}) {
-    this.round = buildOddRound(deriveSeed(this.sessionSeed, this.roundIndex), this.difficulty, {
+    this.round = buildOddRound(deriveSeed(this.sessionSeed, this.roundIndex), {
       avoidIds: this.usedIds,
     });
     if (this.round.id) {
@@ -396,7 +372,6 @@ export class OddApp {
 
   getShareParams() {
     return {
-      diff: this.difficulty !== "easy" ? this.difficulty : undefined,
       seed: String(this.sessionSeed),
     };
   }

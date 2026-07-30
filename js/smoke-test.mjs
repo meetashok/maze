@@ -39,7 +39,7 @@ import {
 import { getGlyphTip, ENCOURAGE_TIPS } from "./trace-tips.js";
 import { letterPaths, numberPaths, shapePaths } from "./dots-shapes.js";
 import { buildPatternRound, PATTERN_DIFFICULTY } from "./pattern.js";
-import { buildOddRound, ODD_DIFFICULTY } from "./odd.js";
+import { buildOddRound, ODD_SETS } from "./odd.js";
 import { buildMemoryDeck, MEMORY_DIFFICULTY, dailyMemorySeed } from "./memory.js";
 import { buildWordSearch, SEARCH_DIFFICULTY, lineCells, dailySearchSeed, SEARCH_WORD_EMOJIS, emojiForSearchWord } from "./search.js";
 import library from "./dots-library.json" with { type: "json" };
@@ -517,22 +517,18 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   const a2 = buildPatternRound(2, "easy", { avoidKeys: [a1.key] });
   assert(a1.key !== a2.key || a1.unit.join("") !== a2.unit.join(""), "pattern can avoid recent keys when possible");
 
-  const o = buildOddRound(7, "easy");
+  const o = buildOddRound(7);
   assert(o.tiles.length === 4, "odd round has 4 tiles");
   assert(o.tiles.filter((t) => t.isOdd).length === 1, "odd round has one odd tile");
   assert(typeof o.oddIndex === "number" && o.tiles[o.oddIndex].isOdd, "oddIndex points to odd tile");
   assert(typeof o.reason === "string" && o.reason.length > 0, "odd round explains why");
   assert(typeof o.id === "string", "odd round has id");
-  const o2 = buildOddRound(7, "easy");
+  const o2 = buildOddRound(7);
   assert(JSON.stringify(o) === JSON.stringify(o2), "odd round deterministic");
-  assert(ODD_DIFFICULTY.easy.length >= 18, "easy odd bank is large");
-  assert(ODD_DIFFICULTY.medium.length >= 18, "medium odd bank is large");
-  assert(ODD_DIFFICULTY.hard.length >= 18, "hard odd bank is large");
+  assert(ODD_SETS.length >= 50, "odd bank mixes all puzzle types");
   const posCounts = [0, 0, 0, 0];
-  for (let seed = 1; seed <= 800; seed += 1) {
-    for (const diff of ["easy", "medium", "hard"]) {
-      posCounts[buildOddRound(seed, diff).oddIndex] += 1;
-    }
+  for (let seed = 1; seed <= 2000; seed += 1) {
+    posCounts[buildOddRound(seed).oddIndex] += 1;
   }
   const posTotal = posCounts.reduce((a, b) => a + b, 0);
   for (let i = 0; i < 4; i += 1) {
@@ -541,7 +537,7 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   }
   const ids = new Set();
   for (let i = 0; i < 5; i++) {
-    const r = buildOddRound(1000 + i, "easy", { avoidIds: [...ids] });
+    const r = buildOddRound(1000 + i, { avoidIds: [...ids] });
     assert(!ids.has(r.id), `odd session avoids repeat ${r.id}`);
     ids.add(r.id);
   }
