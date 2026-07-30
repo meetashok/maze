@@ -703,7 +703,8 @@ export class TraceApp {
 
     const onUp = (e) => {
       if (!this.drawing || e.pointerId !== this._pointerId) return;
-      const finishedStroke = this.maxProgress >= STROKE_COMPLETE;
+      const finishedStroke =
+        this.maxProgress >= (pathLength(this.item.paths[this.strokeIndex]) < 0.2 ? 0.5 : STROKE_COMPLETE);
       if (finishedStroke) {
         this.inkStrokes.push([...this.ink]);
         this.ink = [];
@@ -785,12 +786,23 @@ export class TraceApp {
     });
   }
 
-  _renderGlyphSvg({ item, options, interactive = false, compact = false, showInk = true }) {
+  _renderGlyphSvg({
+    item,
+    options,
+    interactive = false,
+    compact = false,
+    showInk = true,
+    strokeIndex = null,
+    forceComplete = false,
+    showGlyphLabel = true,
+  }) {
     const vb = 100;
     const pad = compact ? 8 : 10;
     const scale = vb - pad * 2;
     const tx = (x) => pad + x * scale;
     const ty = (y) => pad + y * scale;
+    const activeStroke = strokeIndex == null ? this.strokeIndex : strokeIndex;
+    const isComplete = forceComplete || this.completed;
 
     const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
     svg.setAttribute("viewBox", `0 0 ${vb} ${vb}`);
@@ -819,25 +831,22 @@ export class TraceApp {
     const guides = document.createElementNS("http://www.w3.org/2000/svg", "g");
     guides.setAttribute("class", "trace-guides");
 
-    // Precompute start points so print numbers can fan out when strokes share a start.
     const startsNorm = item.paths.map((path) => (path[0] ? { x: path[0].x, y: path[0].y } : null));
 
     item.paths.forEach((path, i) => {
-      const done = interactive && i < this.strokeIndex;
-      const active = interactive && i === this.strokeIndex && !this.completed;
+      const done = interactive && (isComplete || i < activeStroke);
+      const active = interactive && !isComplete && i === activeStroke;
       const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
       p.setAttribute("d", pathToD(path, tx, ty));
       p.setAttribute(
         "class",
-        `trace-guide${done ? " done" : ""}${active ? " active" : ""}${this.completed ? " complete" : ""}`
+        `trace-guide${done ? " done" : ""}${active ? " active" : ""}${isComplete ? " complete" : ""}`
       );
       p.setAttribute("stroke-dasharray", options.dash);
-      p.style.opacity = String(done || this.completed ? 0.25 : options.opacity);
+      p.style.opacity = String(done || isComplete ? 0.25 : options.opacity);
       guides.appendChild(p);
 
       if (options.showStrokeNumbers && path[0]) {
-        // Interactive: only the current stroke number (avoids 1/2 stacking on shared starts).
-        // Print: show all, but nudge labels that share a start point.
         const showNum = !interactive || active;
         if (showNum) {
           const stack = startsNorm[i]
@@ -853,7 +862,6 @@ export class TraceApp {
       }
 
       if (options.showArrows && (!interactive || active)) {
-        // While playing, only the active stroke arrow (green); print keeps all.
         const arrow = directionArrow(path, tx, ty);
         if (arrow) {
           const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
@@ -868,7 +876,7 @@ export class TraceApp {
     });
     svg.appendChild(guides);
 
-    if (showInk) {
+    if (showInk && interactive) {
       const inkLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
       inkLayer.setAttribute("class", "trace-ink-layer");
       for (const stroke of this.inkStrokes) {
@@ -891,9 +899,7 @@ export class TraceApp {
     item.paths.forEach((path, i) => {
       if (!path[0]) return;
       if (interactive) {
-        // Only the live start dot — always green. Drawing future starts on top
-        // of a shared point was covering the green current with orange.
-        if (i !== this.strokeIndex || this.completed) return;
+        if (i !== activeStroke || isComplete) return;
         const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
         c.setAttribute("cx", tx(path[0].x));
         c.setAttribute("cy", ty(path[0].y));
@@ -911,13 +917,15 @@ export class TraceApp {
     });
     svg.appendChild(starts);
 
-    const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
-    label.setAttribute("x", vb / 2);
-    label.setAttribute("y", compact ? 7 : 6);
-    label.setAttribute("text-anchor", "middle");
-    label.setAttribute("class", "trace-glyph-label");
-    label.textContent = item.glyph;
-    svg.appendChild(label);
+    if (showGlyphLabel) {
+      const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      label.setAttribute("x", vb / 2);
+      label.setAttribute("y", compact ? 7 : 6);
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("class", "trace-glyph-label");
+      label.textContent = item.glyph;
+      svg.appendChild(label);
+    }
 
     return svg;
   }
@@ -926,6 +934,39 @@ export class TraceApp {
     const { stage } = this.els;
     if (!stage || !this.item) return;
     const options = this._guideOptions();
+
+    if (this.kind === "word" && this.word) {
+      stage.classList.add("is-word-mode");
+      stage.innerHTML = "";
+      const wrap = document.createElement("div");
+      wrap.className = "trace-word-stage";
+      [...this.word].forEach((ch, i) => {
+        const cell = document.createElement("div");
+        const isCurrent = i === this.wordIndex && !this.completed;
+        const isDone = i < this.wordIndex || (this.completed && i <= this.wordIndex);
+        cell.className = `trace-word-cell${isCurrent ? " is-current" : ""}${isDone ? " is-done" : ""}`;
+        const letterItem = resolveTraceGlyph("letter", ch, this.letterCase);
+        if (!letterItem) return;
+        const svg = this._renderGlyphSvg({
+          item: letterItem,
+          options: isCurrent ? options : { ...options, showArrows: false, showStrokeNumbers: false },
+          interactive: isCurrent,
+          compact: true,
+          showInk: isCurrent,
+          strokeIndex: isCurrent ? this.strokeIndex : 0,
+          forceComplete: isDone && !isCurrent,
+          showGlyphLabel: false,
+        });
+        if (isCurrent) this._bindStagePointer(svg);
+        cell.appendChild(svg);
+        wrap.appendChild(cell);
+      });
+      stage.appendChild(wrap);
+      this._updateStatus();
+      return;
+    }
+
+    stage.classList.remove("is-word-mode");
     const svg = this._renderGlyphSvg({
       item: this.item,
       options,

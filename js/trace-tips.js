@@ -31,16 +31,16 @@ const LETTER_TIPS = {
     coach: "Like E, but no bottom shelf.",
   },
   G: {
-    steps: ["Start near the top-right. Curve like a C down and around.", "Lift. From the opening, slide left a short chin."],
-    coach: "Make a C, then give it a little chin.",
+    steps: ["Start near the top-right. Curve almost all the way around like a big C.", "Lift. From the middle, slide right to make the chin."],
+    coach: "Make a C, then give it a little chin sliding right.",
   },
   H: {
     steps: ["Pull down the left stick.", "Lift. Pull down the right stick.", "Lift. Slide across the middle to connect them."],
-    coach: "Two poles and a bridge.",
+    coach: "Two poles and a bridge — that’s the usual school order.",
   },
   I: {
-    steps: ["Slide a short hat across the top.", "Lift. Pull down through the middle.", "Lift. Slide a short base at the bottom."],
-    coach: "Hat, stick, shoes.",
+    steps: ["Pull down the tall stick in the middle.", "Lift. Slide a short hat across the top.", "Lift. Slide a short base at the bottom."],
+    coach: "Stick first, then hat, then shoes.",
   },
   J: {
     steps: ["Slide a short hat across the top.", "Lift. Pull down, then curve left at the bottom like a hook."],
@@ -55,12 +55,12 @@ const LETTER_TIPS = {
     coach: "Down the wall, across the floor.",
   },
   M: {
-    steps: ["Start at the top-left. Pull down, up to a middle peak, down, then up to the top-right."],
-    coach: "Down-up-down-up — like two mountains.",
+    steps: ["Pull down the left stick.", "Lift. From the top-left, slant down to the middle.", "From that middle, climb up to the top-right.", "Lift. Pull down the right stick."],
+    coach: "Left pole, mountain middle, right pole — lifts between parts are OK.",
   },
   N: {
-    steps: ["Start at the top-left. Pull down, slant up to the top-right, then pull down."],
-    coach: "Down, zip up, down.",
+    steps: ["Pull down the left stick.", "Lift. From the top-left, slant down to the bottom-right.", "Lift. Pull down the right stick."],
+    coach: "Left pole, diagonal zip, right pole.",
   },
   O: {
     steps: ["Start at the top. Circle all the way around back to where you began."],
@@ -91,12 +91,12 @@ const LETTER_TIPS = {
     coach: "Like a smile or a cup — down, around, up.",
   },
   V: {
-    steps: ["Start at the top-left. Slant down to a point, then slant up to the top-right."],
-    coach: "Down to the point, then back up — one continuous V.",
+    steps: ["From the top-left, slant down to the bottom point.", "Lift. From the top-right, slant down to the same point."],
+    coach: "Two slides that meet at the bottom — lift between them if you want.",
   },
   W: {
-    steps: ["Start at the top-left. Down, up, down, up — four zigzags ending at the top-right."],
-    coach: "Two V’s holding hands.",
+    steps: ["Slant down from the top-left.", "Lift. From the middle peak, slant down left to meet it.", "From that peak, slant down right.", "Lift. From the top-right, slant down to meet it."],
+    coach: "Two little mountains — you can lift between the sides.",
   },
   X: {
     steps: ["Start at the top-left. Slant down to the bottom-right.", "Lift. From the top-right, slant down to the bottom-left."],
