@@ -52,12 +52,12 @@ export function dailySearchSeed(date = new Date()) {
   return hashString(`daily-search:${todayDateString(date)}`);
 }
 
+/** Whole-second stopwatch label, e.g. 0:05 or 1:05 (no tenths). */
 export function formatTime(ms) {
-  const totalSec = Math.floor(ms / 1000);
+  const totalSec = Math.floor(Math.max(0, ms) / 1000);
   const m = Math.floor(totalSec / 60);
   const s = totalSec % 60;
-  const tenths = Math.floor((ms % 1000) / 100);
-  return `${m}:${String(s).padStart(2, "0")}.${tenths}`;
+  return `${m}:${String(s).padStart(2, "0")}`;
 }
 
 export function deriveSeed(baseSeed, index) {

@@ -55,7 +55,7 @@ export class MazeApp {
     this.isDaily = false;
     this.showSolution = false;
     this.hintCells = [];
-    this.timerEnabled = true;
+    this.timerEnabled = false;
     this.timerMs = 0;
     this.timerRunning = false;
     this._timerStart = 0;
@@ -85,6 +85,8 @@ export class MazeApp {
 
     this._buildDiffPresets();
     this._bindControls();
+    this.timerEnabled = !!this.els.timerToggle?.checked;
+    this._syncTimerVisibility();
     this._buildIconGrid();
     this._loadFromUrlOrDefault();
     window.addEventListener("resize", () => this._redraw());
@@ -296,9 +298,8 @@ export class MazeApp {
 
     els.timerToggle.addEventListener("change", () => {
       this.timerEnabled = els.timerToggle.checked;
-      els.timerDisplay.hidden = !this.timerEnabled;
-      els.bestDisplay.hidden = !this.timerEnabled;
-      if (!this.timerEnabled) this._stopTimer(false);
+      this._syncTimerVisibility();
+      // Keep counting in the background so completion can still show elapsed time.
     });
 
     document.addEventListener("keydown", (e) => {
@@ -413,17 +414,17 @@ export class MazeApp {
   }
 
   _onTraceStart() {
-    if (this.timerEnabled) this._startTimer();
+    // Always track elapsed time (quietly); the toggle only shows the live clock.
+    this._startTimer();
   }
 
   _onSolved() {
     this._stopTimer(true);
     const ms = this.timerMs;
-    let detail = "";
+    let detail = ms > 0 ? `Time: ${formatTime(ms)}` : "";
     if (this.timerEnabled && ms > 0) {
       const { isNew } = savePersonalBest(this.size, ms);
       this._updateBestDisplay();
-      detail = `Time: ${formatTime(ms)}`;
       if (isNew) {
         this.els.recordBanner.hidden = false;
         detail += " · New record!";
@@ -643,7 +644,12 @@ export class MazeApp {
   }
 
   _updateTimerDisplay() {
-    this.els.timerDisplay.textContent = formatTime(this.timerMs);
+    if (this.els.timerDisplay) this.els.timerDisplay.textContent = formatTime(this.timerMs);
+  }
+
+  _syncTimerVisibility() {
+    if (this.els.timerDisplay) this.els.timerDisplay.hidden = !this.timerEnabled;
+    if (this.els.bestDisplay) this.els.bestDisplay.hidden = !this.timerEnabled;
   }
 
   _updateBestDisplay() {

@@ -230,7 +230,7 @@ export class SearchApp {
     this.dragCells = [];
     this.showAll = false;
     this.completed = false;
-    this.timerEnabled = true;
+    this.timerEnabled = false;
     this._stopCelebrate = null;
     this.els = {};
     this.timer = new GameTimer((ms) => this._updateTimerDisplay(ms));
@@ -241,6 +241,8 @@ export class SearchApp {
     this.lib = await loadWords();
     this._buildCategories();
     this._bindControls();
+    this.timerEnabled = !!this.els.timerToggle?.checked;
+    this._syncTimerVisibility();
     const { game, params } = parseGameHash();
     if (game === "search") {
       this.onHashChange(params);
@@ -345,8 +347,7 @@ export class SearchApp {
     });
     this.els.timerToggle?.addEventListener("change", () => {
       this.timerEnabled = this.els.timerToggle.checked;
-      if (!this.timerEnabled) this.timer.reset();
-      this._updateTimerDisplay(this.timer.ms);
+      this._syncTimerVisibility();
     });
   }
 
@@ -430,6 +431,10 @@ export class SearchApp {
     if (this.els.timerDisplay) this.els.timerDisplay.textContent = formatTime(ms);
   }
 
+  _syncTimerVisibility() {
+    if (this.els.timerDisplay) this.els.timerDisplay.hidden = !this.timerEnabled;
+  }
+
   _updateStatus() {
     if (!this.els.status || !this.puzzle) return;
     const total = this.puzzle.words.length;
@@ -493,7 +498,7 @@ export class SearchApp {
       } catch {
         /* ignore */
       }
-      if (this.timerEnabled && !this.timer.running) this.timer.start();
+      if (!this.timer.running) this.timer.start();
       this.dragging = true;
       this.dragStart = cell;
       this.dragCells = [cell];
@@ -668,7 +673,7 @@ export class SearchApp {
     const ms = this.timer.ms;
     const detail = [
       `${this.found.size} words`,
-      this.timerEnabled && ms > 0 ? `Time: ${formatTime(ms)}` : null,
+      ms > 0 ? `Time: ${formatTime(ms)}` : null,
       this.difficulty,
     ]
       .filter(Boolean)

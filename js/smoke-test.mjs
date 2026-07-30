@@ -206,7 +206,9 @@ function assert(cond, msg) {
   assert(detourLabel(2) === "Tricky dead ends", "tricky dead ends style");
   assert(detourLabel(3) === "Very tricky", "very tricky style");
   assert(detourLabel(4) === "Confusing paths", "confusing paths style");
-  assert(formatTime(65000) === "1:05.0", "formatTime");
+  assert(formatTime(65000) === "1:05", "formatTime whole seconds");
+  assert(formatTime(1500) === "0:01", "formatTime floors tenths");
+  assert(formatTime(0) === "0:00", "formatTime zero");
 }
 
 // Derive seeds differ
