@@ -15,10 +15,10 @@ import {
 } from "./common.js";
 
 const MILESTONE_EVERY = 5;
-const MILESTONE_MS = 1800;
+const MILESTONE_MS = 1600;
 const AVOID_RECENT = 10;
-const ANSWER_PAUSE_MS = 1000;
-const REVEAL_PAUSE_MS = 1400;
+const ANSWER_PAUSE_MS = 480;
+const REVEAL_PAUSE_MS = 1100;
 const DEAL_MS = 480;
 const MAX_WRONG_TRIES = 3;
 
@@ -36,6 +36,16 @@ const EASY_SETS = [
   { id: "faces-ball", match: ["😀", "😄", "😁"], odd: ["⚽"], reason: "Ball is not a face" },
   { id: "hearts-frog", match: ["❤️", "🧡", "💛"], odd: ["🐸"], reason: "Frog is not a heart" },
   { id: "flowers-car", match: ["🌹", "🌷", "🌻"], odd: ["🚕"], reason: "Car is not a flower" },
+  { id: "hats-fish", match: ["🎩", "🧢", "👒"], odd: ["🐟"], reason: "Fish is not a hat" },
+  { id: "shoes-banana", match: ["👟", "👠", "🥾"], odd: ["🍌"], reason: "Banana is not a shoe" },
+  { id: "bugs-boat", match: ["🦋", "🐝", "🐞"], odd: ["⛵"], reason: "Boat is not a bug" },
+  { id: "instruments-apple", match: ["🎸", "🎺", "🥁"], odd: ["🍎"], reason: "Apple is not an instrument" },
+  { id: "weather-dog", match: ["☀️", "🌧️", "❄️"], odd: ["🐶"], reason: "Dog is not weather" },
+  { id: "toys-tree", match: ["🧸", "🪀", "🎮"], odd: ["🌳"], reason: "Tree is not a toy" },
+  { id: "sea-car", match: ["🐙", "🦀", "🐬"], odd: ["🚗"], reason: "Car is not a sea creature" },
+  { id: "veggies-star", match: ["🥕", "🌽", "🥦"], odd: ["⭐"], reason: "Star is not a veggie" },
+  { id: "clocks-frog", match: ["⏰", "🕰️", "⌚"], odd: ["🐸"], reason: "Frog is not a clock" },
+  { id: "moons-pizza", match: ["🌙", "🌛", "🌜"], odd: ["🍕"], reason: "Pizza is not a moon" },
 ];
 
 const MEDIUM_SETS = [
@@ -53,6 +63,16 @@ const MEDIUM_SETS = [
   { id: "day-night", match: ["☀️", "🌤️", "🌈"], odd: ["🌙"], reason: "Moon is for night" },
   { id: "cold-hot", match: ["❄️", "⛄", "🧊"], odd: ["🔥"], reason: "Fire is hot, not cold" },
   { id: "books-toys", match: ["📕", "📗", "📘"], odd: ["🧸"], reason: "Teddy is a toy, not a book" },
+  { id: "insects-birds", match: ["🐝", "🐞", "🦋"], odd: ["🐦"], reason: "Bird is not an insect" },
+  { id: "birds-insects", match: ["🐦", "🐤", "🦉"], odd: ["🐝"], reason: "Bee is an insect, not a bird" },
+  { id: "drink-food", match: ["🥛", "🧃", "☕"], odd: ["🍕"], reason: "Pizza is food, not a drink" },
+  { id: "food-drink", match: ["🍕", "🍔", "🌮"], odd: ["🥛"], reason: "Milk is a drink" },
+  { id: "winter-summer", match: ["🧤", "🧣", "🧥"], odd: ["🩳"], reason: "Shorts are for warm weather" },
+  { id: "summer-winter", match: ["🩳", "🕶️", "🩴"], odd: ["🧤"], reason: "Gloves are for cold weather" },
+  { id: "circle-shapes", match: ["⚪", "🔴", "🟡"], odd: ["🔺"], reason: "Triangle is not a circle" },
+  { id: "tools-toys", match: ["🔨", "🔧", "🪚"], odd: ["🧸"], reason: "Teddy is a toy, not a tool" },
+  { id: "space-earth", match: ["🚀", "🛸", "🛰️"], odd: ["🌳"], reason: "Tree is on Earth, not in space" },
+  { id: "music-sports", match: ["🎵", "🎶", "🎼"], odd: ["⚽"], reason: "Ball is sports, not music" },
 ];
 
 /** Hard: three identical (or near-identical), one differs by one attribute. */
@@ -71,6 +91,14 @@ const HARD_SETS = [
   { id: "bear-vs-panda", match: ["🐻", "🐻", "🐻"], odd: ["🐼"], reason: "Panda is a different bear" },
   { id: "car-vs-taxi", match: ["🚗", "🚗", "🚗"], odd: ["🚕"], reason: "Taxi is a different car" },
   { id: "flower-vs-other", match: ["🌹", "🌹", "🌹"], odd: ["🌻"], reason: "Sunflower looks different" },
+  { id: "fish-vs-blowfish", match: ["🐟", "🐟", "🐟"], odd: ["🐡"], reason: "That fish looks different" },
+  { id: "tree-vs-palm", match: ["🌳", "🌳", "🌳"], odd: ["🌴"], reason: "Palm tree looks different" },
+  { id: "book-vs-open", match: ["📕", "📕", "📕"], odd: ["📖"], reason: "That book is open" },
+  { id: "ball-vs-other", match: ["⚽", "⚽", "⚽"], odd: ["🏀"], reason: "Basketball is a different ball" },
+  { id: "cloud-vs-rain", match: ["☁️", "☁️", "☁️"], odd: ["🌧️"], reason: "That cloud is raining" },
+  { id: "phone-vs-old", match: ["📱", "📱", "📱"], odd: ["☎️"], reason: "That phone looks different" },
+  { id: "cookie-vs-donut", match: ["🍪", "🍪", "🍪"], odd: ["🍩"], reason: "Donut is not a cookie" },
+  { id: "hand-vs-point", match: ["✋", "✋", "✋"], odd: ["👉"], reason: "That hand is pointing" },
 ];
 
 export const ODD_DIFFICULTY = {
@@ -295,7 +323,7 @@ export class OddApp {
 
     if (correct) {
       this.lock = true;
-      this._markResolved(index);
+      this._markResolved(index, { celebrate: true });
       playPop();
       this._updateStatus(why ? `You found it! ${why}.` : "You found it!");
       clearTimeout(this._answerTimer);
@@ -312,7 +340,7 @@ export class OddApp {
 
     if (this.wrongTries >= MAX_WRONG_TRIES) {
       this.lock = true;
-      this._markResolved(this.round.oddIndex);
+      this._markResolved(this.round.oddIndex, { celebrate: true });
       this._updateStatus(why ? `This one! ${why}.` : "This is the odd one!");
       clearTimeout(this._answerTimer);
       this._answerTimer = setTimeout(() => this._nextAfterAnswer(), REVEAL_PAUSE_MS);
@@ -325,10 +353,15 @@ export class OddApp {
     );
   }
 
-  _markResolved(selectedIndex) {
+  _markResolved(selectedIndex, { celebrate: doCelebrate = false } = {}) {
     this.els.stage?.querySelectorAll(".odd-tile").forEach((btn, i) => {
       btn.disabled = true;
-      if (this.round.tiles[i].isOdd) btn.classList.add("is-correct");
+      if (this.round.tiles[i].isOdd) {
+        btn.classList.add("is-correct");
+        if (doCelebrate) btn.classList.add("is-pop");
+      } else {
+        btn.classList.add("is-dim");
+      }
       if (i === selectedIndex) btn.classList.add("is-selected");
     });
   }
@@ -346,7 +379,7 @@ export class OddApp {
   _showMilestone(count) {
     this._updateStatus(`Nice — ${count} puzzles done!`);
     this._stopCelebrate?.();
-    this._stopCelebrate = celebrate(document.body, 2400);
+    this._stopCelebrate = celebrate(document.body, 2000);
     showCelebrationOverlay(this.els.celebrate, {
       emoji: "🎯",
       message: count === MILESTONE_EVERY ? "Great start!" : "Keep going!",
