@@ -480,6 +480,22 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(JSON.stringify(p) === JSON.stringify(p2), "pattern round deterministic");
   const med = buildPatternRound(99, "medium");
   assert(["AAB", "ABB", "ABC"].includes(med.type), "medium uses AAB/ABB/ABC");
+  const hard = buildPatternRound(55, "hard");
+  assert(["AABB", "ABC", "grow"].includes(hard.type), "hard uses AABB/ABC/grow");
+  if (hard.type === "grow") {
+    assert(Array.isArray(hard.groupSizes), "grow pattern exposes group sizes for separators");
+  }
+  const animalEmojis = ["🐶", "🐱", "🐸", "🦊", "🐻", "🐼", "🐭"];
+  for (const seed of [1, 2, 3, 7, 11, 42, 99]) {
+    for (const diff of ["easy", "medium", "hard"]) {
+      const r = buildPatternRound(seed, diff);
+      const used = [...r.prompt, r.answer, ...r.choices].join("");
+      assert(
+        animalEmojis.every((a) => !used.includes(a)),
+        `pattern ${diff} seed ${seed} has no animal icons`
+      );
+    }
+  }
   const a1 = buildPatternRound(1, "easy");
   const a2 = buildPatternRound(2, "easy", { avoidKeys: [a1.key] });
   assert(a1.key !== a2.key || a1.unit.join("") !== a2.unit.join(""), "pattern can avoid recent keys when possible");

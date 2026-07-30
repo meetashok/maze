@@ -25,12 +25,31 @@
 .pattern-stage {
   display: flex;
   flex-wrap: wrap;
-  gap: clamp(10px, 2.5vw, 14px);
+  gap: clamp(8px, 2vw, 12px);
   justify-content: center;
   align-items: center;
   width: min(100%, 560px);
   min-height: 88px;
   touch-action: manipulation;
+}
+
+.pattern-unit-sep {
+  display: inline-block;
+  width: 10px;
+  height: 28px;
+  margin: 0 2px;
+  border-radius: 999px;
+  background: rgba(31, 138, 126, 0.22);
+  flex: 0 0 auto;
+  align-self: center;
+}
+
+.pattern-ask-sep {
+  width: 18px;
+  height: 2px;
+  margin: 0 6px;
+  border-radius: 2px;
+  background: rgba(31, 138, 126, 0.45);
 }
 
 .pattern-item {
@@ -77,13 +96,26 @@
   font-weight: 400;
 }
 
+.pattern-pick-label {
+  margin: 10px 0 0;
+  width: min(100%, 560px);
+  padding-top: 14px;
+  border-top: 2px dashed rgba(31, 138, 126, 0.28);
+  font-family: var(--font-display);
+  font-size: clamp(0.95rem, 3.5vw, 1.1rem);
+  font-weight: 800;
+  color: var(--teal-deep);
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
 .pattern-choices {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
   justify-content: center;
   width: min(100%, 560px);
-  margin-top: 4px;
+  margin-top: 2px;
 }
 
 .pattern-choice {
@@ -146,11 +178,40 @@
   box-shadow:
     0 0 0 3px rgba(255, 107, 74, 0.28),
     0 4px 12px rgba(36, 48, 55, 0.1);
+  opacity: 0.72;
+  filter: saturate(0.7);
+}
+
+.pattern-choice.is-shake {
+  animation: pattern-shake 0.32s ease;
+}
+
+.pattern-choice.is-dim {
+  opacity: 0.55;
+  filter: saturate(0.75);
 }
 
 .pattern-choice:disabled {
   cursor: default;
   opacity: 0.95;
+}
+
+.pattern-choice:disabled:not(.is-correct):not(.is-wrong) {
+  opacity: 0.75;
+  filter: saturate(0.85);
+}
+
+@keyframes pattern-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-6px);
+  }
+  75% {
+    transform: translateX(6px);
+  }
 }
 
 .pattern-stage.is-dealing .pattern-item,
@@ -190,7 +251,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .pattern-stage.is-dealing .pattern-item,
-  .pattern-choices.is-dealing .pattern-choice {
+  .pattern-choices.is-dealing .pattern-choice,
+  .pattern-choice.is-shake {
     animation: none;
   }
 }
@@ -203,6 +265,16 @@
 
 [data-theme="dark"] .pattern-item--blank {
   background: rgba(62, 207, 190, 0.12);
+}
+
+[data-theme="dark"] .pattern-unit-sep,
+[data-theme="dark"] .pattern-ask-sep {
+  background: rgba(62, 207, 190, 0.35);
+}
+
+[data-theme="dark"] .pattern-pick-label {
+  border-top-color: rgba(62, 207, 190, 0.28);
+  color: var(--teal);
 }
 
 @media (pointer: coarse) {
