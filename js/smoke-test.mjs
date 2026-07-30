@@ -525,9 +525,20 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
   assert(typeof o.id === "string", "odd round has id");
   const o2 = buildOddRound(7, "easy");
   assert(JSON.stringify(o) === JSON.stringify(o2), "odd round deterministic");
-  assert(ODD_DIFFICULTY.easy.length >= 10, "easy odd bank is large");
-  assert(ODD_DIFFICULTY.medium.length >= 10, "medium odd bank is large");
-  assert(ODD_DIFFICULTY.hard.length >= 10, "hard odd bank is large");
+  assert(ODD_DIFFICULTY.easy.length >= 18, "easy odd bank is large");
+  assert(ODD_DIFFICULTY.medium.length >= 18, "medium odd bank is large");
+  assert(ODD_DIFFICULTY.hard.length >= 18, "hard odd bank is large");
+  const posCounts = [0, 0, 0, 0];
+  for (let seed = 1; seed <= 800; seed += 1) {
+    for (const diff of ["easy", "medium", "hard"]) {
+      posCounts[buildOddRound(seed, diff).oddIndex] += 1;
+    }
+  }
+  const posTotal = posCounts.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < 4; i += 1) {
+    const share = posCounts[i] / posTotal;
+    assert(share > 0.2 && share < 0.3, `odd tile index ${i} is roughly uniform (${(share * 100).toFixed(1)}%)`);
+  }
   const ids = new Set();
   for (let i = 0; i < 5; i++) {
     const r = buildOddRound(1000 + i, "easy", { avoidIds: [...ids] });

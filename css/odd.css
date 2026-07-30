@@ -85,6 +85,15 @@
     0 6px 14px rgba(36, 48, 55, 0.1);
 }
 
+.odd-tile.is-pop {
+  animation: odd-pop 0.45s ease;
+}
+
+.odd-tile.is-dim {
+  opacity: 0.45;
+  filter: saturate(0.55);
+}
+
 .odd-tile.is-wrong {
   background: #fff5f3;
   background-image: none;
@@ -114,6 +123,21 @@
   }
 }
 
+@keyframes odd-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.14) rotate(-3deg);
+  }
+  65% {
+    transform: scale(0.96) rotate(2deg);
+  }
+  100% {
+    transform: scale(1) rotate(0);
+  }
+}
+
 .odd-tile:disabled {
   cursor: default;
   opacity: 0.95;
@@ -122,6 +146,10 @@
 .odd-tile:disabled:not(.is-correct):not(.is-wrong) {
   opacity: 0.75;
   filter: saturate(0.85);
+}
+
+.odd-tile.is-dim:disabled {
+  opacity: 0.45;
 }
 
 .odd-stage.is-dealing {
@@ -150,7 +178,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .odd-stage.is-dealing .odd-tile,
-  .odd-tile.is-shake {
+  .odd-tile.is-shake,
+  .odd-tile.is-pop {
     animation: none;
   }
 }
