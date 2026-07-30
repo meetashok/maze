@@ -106,7 +106,7 @@ export class MemoryApp {
     this.lock = false;
     this.flips = 0;
     this.completed = false;
-    this.timerEnabled = true;
+    this.timerEnabled = false;
     this.focusIndex = 0;
     this._stopCelebrate = null;
     this._mismatchTimer = 0;
@@ -120,6 +120,8 @@ export class MemoryApp {
     this.themes = await loadThemes();
     this._buildCategories();
     this._bindControls();
+    this.timerEnabled = !!this.els.timerToggle?.checked;
+    this._syncTimerVisibility();
     const { game, params } = parseGameHash();
     if (game === "memory") {
       this.onHashChange(params);
@@ -218,8 +220,7 @@ export class MemoryApp {
     });
     this.els.timerToggle?.addEventListener("change", () => {
       this.timerEnabled = this.els.timerToggle.checked;
-      if (!this.timerEnabled) this.timer.reset();
-      this._updateTimerDisplay(this.timer.ms);
+      this._syncTimerVisibility();
     });
     this.els.stage?.addEventListener("keydown", (e) => this._onKey(e));
   }
@@ -305,6 +306,10 @@ export class MemoryApp {
 
   _updateTimerDisplay(ms) {
     if (this.els.timerDisplay) this.els.timerDisplay.textContent = formatTime(ms);
+  }
+
+  _syncTimerVisibility() {
+    if (this.els.timerDisplay) this.els.timerDisplay.hidden = !this.timerEnabled;
   }
 
   _updateBest() {
@@ -533,7 +538,7 @@ export class MemoryApp {
     if (this.flipped.includes(index)) return;
     if (this.flipped.length >= 2) return;
 
-    if (this.flipped.length === 0 && this.timerEnabled && !this.timer.running) {
+    if (this.flipped.length === 0 && !this.timer.running) {
       this.timer.start();
     }
 
@@ -607,7 +612,7 @@ export class MemoryApp {
     this._announce("You found them all!");
     const detail = [
       `Flips: ${this.flips}`,
-      this.timerEnabled && ms > 0 ? `Time: ${formatTime(ms)}` : null,
+      ms > 0 ? `Time: ${formatTime(ms)}` : null,
       `${"★".repeat(stars)}${"☆".repeat(3 - stars)}`,
       isNew ? "New best!" : null,
     ]

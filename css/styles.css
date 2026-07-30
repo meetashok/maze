@@ -1006,7 +1006,7 @@ a {
   font-family: var(--font-display);
   font-size: 1.25rem;
   color: var(--teal-deep);
-  min-width: 4.5rem;
+  min-width: 3.5rem;
 }
 
 .best-display {

@@ -173,11 +173,11 @@
 
             <div class="timer-row">
               <label class="toggle">
-                <input type="checkbox" id="timer-toggle" checked />
-                <span>Timer</span>
+                <input type="checkbox" id="timer-toggle" />
+                <span>Show timer</span>
               </label>
-              <span id="timer-display" class="timer-display">0:00.0</span>
-              <span id="best-display" class="best-display">Best: -</span>
+              <span id="timer-display" class="timer-display" hidden>0:00</span>
+              <span id="best-display" class="best-display" hidden>Best: -</span>
             </div>
           </section>
 
@@ -264,15 +264,15 @@
 
             <div class="timer-row">
               <label class="toggle">
-                <input type="checkbox" id="dots-timer-toggle" checked />
-                <span>Timer</span>
+                <input type="checkbox" id="dots-timer-toggle" />
+                <span>Show timer</span>
               </label>
               <label class="toggle">
                 <input type="checkbox" id="dots-auto-hint" checked />
                 <span>Auto-hint</span>
               </label>
-              <span id="dots-timer-display" class="timer-display">0:00.0</span>
-              <span id="dots-best-display" class="best-display">Best: -</span>
+              <span id="dots-timer-display" class="timer-display" hidden>0:00</span>
+              <span id="dots-best-display" class="best-display" hidden>Best: -</span>
             </div>
           </section>
 
@@ -395,7 +395,7 @@
             <p id="memory-status" class="memory-status">Tap a green card to flip it!</p>
             <div class="memory-stats" aria-live="polite">
               <span id="memory-flips">Flips: 0</span>
-              <span id="memory-timer-display" class="timer-display">0:00.0</span>
+              <span id="memory-timer-display" class="timer-display" hidden>0:00</span>
               <span id="memory-best-display" class="best-display">Best: -</span>
             </div>
             <div id="memory-stage" class="memory-stage"></div>
@@ -441,8 +441,8 @@
             </div>
             <div class="timer-row">
               <label class="toggle">
-                <input type="checkbox" id="memory-timer-toggle" checked />
-                <span>Timer</span>
+                <input type="checkbox" id="memory-timer-toggle" />
+                <span>Show timer</span>
               </label>
             </div>
           </section>
@@ -509,10 +509,10 @@
             </div>
             <div class="timer-row">
               <label class="toggle">
-                <input type="checkbox" id="search-timer-toggle" checked />
-                <span>Timer</span>
+                <input type="checkbox" id="search-timer-toggle" />
+                <span>Show timer</span>
               </label>
-              <span id="search-timer-display" class="timer-display">0:00.0</span>
+              <span id="search-timer-display" class="timer-display" hidden>0:00</span>
             </div>
           </section>
         </main>

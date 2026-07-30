@@ -318,7 +318,7 @@ export class DotsApp {
     this.completed = false;
     this.hintPulse = false;
     this.autoHint = true;
-    this.timerEnabled = true;
+    this.timerEnabled = false;
     this.lineStyle = "straight";
     this.lastDrawnSegment = -1;
     this._stopCelebrate = null;
@@ -332,6 +332,8 @@ export class DotsApp {
     this.lib = await loadDotsLibrary();
     this._buildCategoryButtons();
     this._bindControls();
+    this.timerEnabled = !!this.els.timerToggle?.checked;
+    this._syncTimerVisibility();
     // Hub owns deep-link routing; prepare a default puzzle without touching the hash.
     if (!this.picture) {
       const seed = (Math.random() * 0xffffffff) >>> 0;
@@ -440,9 +442,7 @@ export class DotsApp {
 
     els.timerToggle?.addEventListener("change", () => {
       this.timerEnabled = els.timerToggle.checked;
-      els.timerDisplay.hidden = !this.timerEnabled;
-      els.bestDisplay.hidden = !this.timerEnabled;
-      if (!this.timerEnabled) this.timer.stop(true);
+      this._syncTimerVisibility();
     });
 
     els.btnNew?.addEventListener("click", () => {
@@ -626,7 +626,7 @@ export class DotsApp {
     clearTimeout(this._inactivityTimer);
 
     if (index === this.connected) {
-      if (this.connected === 0 && this.timerEnabled) this.timer.start();
+      if (this.connected === 0) this.timer.start();
       this.connected++;
       this.lastDrawnSegment = this.connected - 1;
       this.hintPulse = false;
@@ -716,20 +716,22 @@ export class DotsApp {
 
     if (this.els.completeBanner) this.els.completeBanner.hidden = false;
     if (this.els.completeTime) {
-      this.els.completeTime.textContent = this.timerEnabled
-        ? `Time: ${formatTime(ms)}${isNew ? " · New record!" : ""}`
-        : "Picture complete!";
+      this.els.completeTime.textContent =
+        ms > 0
+          ? `Time: ${formatTime(ms)}${isNew ? " · New record!" : ""}`
+          : "Picture complete!";
     }
     const best = getStoredBest(DOTS_PB_KEY, `${this.difficulty}:${this.labelType}`);
     if (this.els.completeBest) {
-      this.els.completeBest.textContent = best ? `Your best (${this.difficulty}): ${formatTime(best)}` : "";
+      this.els.completeBest.textContent =
+        this.timerEnabled && best ? `Your best (${this.difficulty}): ${formatTime(best)}` : "";
     }
 
     this._updateStatus();
     this._stopCelebrate = celebrate(document.body, 3200);
     showCelebrationOverlay(this.els.celebrate, {
       emoji: "🎉",
-      detail: this.timerEnabled && ms > 0 ? `Time: ${formatTime(ms)}` : `${this.picture?.name || "Picture"} complete!`,
+      detail: ms > 0 ? `Time: ${formatTime(ms)}` : `${this.picture?.name || "Picture"} complete!`,
       againLabel: "Play Again",
       newLabel: "New Picture",
       onAgain: () => this._resetProgress(),
@@ -743,6 +745,11 @@ export class DotsApp {
 
   _updateTimerDisplay(ms) {
     if (this.els.timerDisplay) this.els.timerDisplay.textContent = formatTime(ms);
+  }
+
+  _syncTimerVisibility() {
+    if (this.els.timerDisplay) this.els.timerDisplay.hidden = !this.timerEnabled;
+    if (this.els.bestDisplay) this.els.bestDisplay.hidden = !this.timerEnabled;
   }
 
   _updateBestDisplay() {
