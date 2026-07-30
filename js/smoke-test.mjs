@@ -41,7 +41,7 @@ import { letterPaths, numberPaths, shapePaths } from "./dots-shapes.js";
 import { buildPatternRound, PATTERN_DIFFICULTY } from "./pattern.js";
 import { buildOddRound, ODD_DIFFICULTY } from "./odd.js";
 import { buildMemoryDeck, MEMORY_DIFFICULTY, dailyMemorySeed } from "./memory.js";
-import { buildWordSearch, SEARCH_DIFFICULTY, lineCells, dailySearchSeed } from "./search.js";
+import { buildWordSearch, SEARCH_DIFFICULTY, lineCells, dailySearchSeed, SEARCH_WORD_EMOJIS, emojiForSearchWord } from "./search.js";
 import library from "./dots-library.json" with { type: "json" };
 import memoryThemes from "./memory-themes.json" with { type: "json" };
 import searchWords from "./search-words.json" with { type: "json" };
@@ -464,6 +464,23 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
     SEARCH_DIFFICULTY.easy.dirs.every(([dr, dc]) => Math.abs(dr) + Math.abs(dc) === 1),
     "easy search has no diagonals"
   );
+  for (const cat of searchWords.categories) {
+    for (const word of cat.words) {
+      assert(
+        Boolean(SEARCH_WORD_EMOJIS[word]),
+        `search word ${word} (${cat.id}) has a clue emoji`
+      );
+      assert(
+        emojiForSearchWord(word) !== cat.emoji || SEARCH_WORD_EMOJIS[word] === cat.emoji,
+        `search word ${word} does not silently fall back`
+      );
+    }
+  }
+  assert(emojiForSearchWord("PIZZA") === "🍕", "pizza clue is pizza");
+  assert(emojiForSearchWord("BUNNY") === "🐰", "bunny clue is bunny");
+  assert(emojiForSearchWord("SATURN") === "🪐", "saturn clue is planet");
+  assert(emojiForSearchWord("SANTA") === "🎅", "santa clue is santa");
+  assert(emojiForSearchWord("BABY") === "👶", "baby clue is baby");
 }
 
 // Pattern + Odd One Out
