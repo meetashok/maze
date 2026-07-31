@@ -5,6 +5,8 @@
  *
  * Flip `offline: true` on a game entry to hide it from the hub while keeping
  * its code, routes, and panel markup for later.
+ *
+ * Nav: up to PRIMARY_SLOTS buttons in a fixed-height row; overflow in More ▾.
  */
 
 import { MazeApp } from "./ui.js";
@@ -20,6 +22,15 @@ import {
   initTheme,
 } from "./common.js";
 import { bindSoundToggle } from "./sound.js";
+
+/** How many game buttons to show in the primary row before the More menu. */
+export const PRIMARY_SLOTS = 5;
+
+/**
+ * Display order for hub nav + landing (best games first).
+ * Offline entries are skipped by visibleGameIds().
+ */
+export const GAME_ORDER = ["mazes", "odd", "memory", "pattern", "trace", "search", "dots"];
 
 /**
  * @type {Record<string, {
@@ -107,9 +118,9 @@ const HOME_META = {
   howto: "Choose a game below. Tap the home button any time to come back here.",
 };
 
-/** Games shown in nav + landing (excludes offline entries). */
+/** Games shown in nav + landing (excludes offline entries), in GAME_ORDER. */
 export function visibleGameIds() {
-  return Object.keys(GAMES).filter((id) => !GAMES[id].offline);
+  return GAME_ORDER.filter((id) => GAMES[id] && !GAMES[id].offline);
 }
 
 function isPlayableGame(id) {
@@ -121,6 +132,8 @@ const GAME_IDS = visibleGameIds();
 class GameHub {
   constructor() {
     this.activeGame = "home";
+    this.menuOpen = false;
+    this.overflowIds = [];
     this.mazeApp = null;
     this.dotsApp = null;
     this.traceApp = null;
@@ -216,6 +229,8 @@ class GameHub {
       brandHome: $("brand-home"),
       nav: $("game-nav"),
       primary: $("game-nav-primary"),
+      moreBtn: $("game-nav-more"),
+      menu: $("game-nav-menu"),
       landing: $("game-home"),
       landingCards: $("landing-cards"),
       panelMazes: $("game-mazes"),
@@ -229,28 +244,52 @@ class GameHub {
     };
   }
 
-  _makeGameButton(id) {
+  _makeGameButton(id, { inMenu = false } = {}) {
     const meta = GAMES[id];
     const btn = document.createElement("button");
     btn.type = "button";
-    btn.className = "game-nav-btn";
+    btn.className = inMenu ? "game-nav-menu-item" : "game-nav-btn";
     btn.dataset.game = id;
+    if (inMenu) btn.setAttribute("role", "menuitem");
     btn.innerHTML = `<span class="game-nav-emoji" aria-hidden="true">${meta.emoji}</span><span class="game-nav-label">${meta.short}</span>`;
     btn.setAttribute("aria-pressed", "false");
     btn.setAttribute("aria-label", meta.title);
     btn.title = meta.title;
-    btn.addEventListener("click", () => this._switchGame(id));
+    btn.addEventListener("click", () => {
+      this._closeMenu();
+      this._switchGame(id);
+    });
     return btn;
   }
 
   _buildNav() {
-    const { primary } = this.els;
+    const { primary, moreBtn, menu } = this.els;
     if (!primary) return;
     primary.innerHTML = "";
-    primary.style.setProperty("--game-slots", String(GAME_IDS.length));
-    for (const id of GAME_IDS) {
+    primary.style.setProperty("--game-slots", String(PRIMARY_SLOTS));
+
+    const primaryIds = GAME_IDS.slice(0, PRIMARY_SLOTS);
+    this.overflowIds = GAME_IDS.slice(PRIMARY_SLOTS);
+
+    for (const id of primaryIds) {
       primary.appendChild(this._makeGameButton(id));
     }
+
+    if (menu) {
+      menu.innerHTML = "";
+      for (const id of this.overflowIds) {
+        menu.appendChild(this._makeGameButton(id, { inMenu: true }));
+      }
+    }
+
+    if (moreBtn) {
+      const showMore = this.overflowIds.length > 0;
+      moreBtn.hidden = !showMore;
+      moreBtn.setAttribute("aria-expanded", "false");
+      moreBtn.classList.remove("is-open");
+    }
+    this.menuOpen = false;
+    if (menu) menu.hidden = true;
   }
 
   _buildLanding() {
@@ -277,8 +316,41 @@ class GameHub {
   }
 
   _bindNav() {
-    this.els.homeBtn?.addEventListener("click", () => this._switchGame("home"));
-    this.els.brandHome?.addEventListener("click", () => this._switchGame("home"));
+    this.els.homeBtn?.addEventListener("click", () => {
+      this._closeMenu();
+      this._switchGame("home");
+    });
+    this.els.brandHome?.addEventListener("click", () => {
+      this._closeMenu();
+      this._switchGame("home");
+    });
+    this.els.moreBtn?.addEventListener("click", (e) => {
+      e.stopPropagation();
+      this.menuOpen ? this._closeMenu() : this._openMenu();
+    });
+    document.addEventListener("click", (e) => {
+      if (!this.menuOpen) return;
+      if (this.els.nav?.contains(e.target)) return;
+      this._closeMenu();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") this._closeMenu();
+    });
+  }
+
+  _openMenu() {
+    if (!this.els.menu || this.els.moreBtn?.hidden) return;
+    this.menuOpen = true;
+    this.els.menu.hidden = false;
+    this.els.moreBtn?.setAttribute("aria-expanded", "true");
+    this.els.moreBtn?.classList.add("is-open");
+  }
+
+  _closeMenu() {
+    this.menuOpen = false;
+    if (this.els.menu) this.els.menu.hidden = true;
+    this.els.moreBtn?.setAttribute("aria-expanded", "false");
+    this.els.moreBtn?.classList.remove("is-open");
   }
 
   _syncNavActive(game) {
@@ -290,6 +362,8 @@ class GameHub {
       btn.setAttribute("aria-pressed", on ? "true" : "false");
     });
     this.els.homeBtn?.classList.toggle("is-active", game === "home");
+    const overflowActive = this.overflowIds.includes(game);
+    this.els.moreBtn?.classList.toggle("is-active", overflowActive);
   }
 
   _panelFor(game) {
@@ -380,8 +454,10 @@ class GameHub {
   }
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  const hub = new GameHub();
-  hub.init();
-  window.__gameHub = hub;
-});
+if (typeof document !== "undefined") {
+  document.addEventListener("DOMContentLoaded", () => {
+    const hub = new GameHub();
+    hub.init();
+    window.__gameHub = hub;
+  });
+}

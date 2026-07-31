@@ -45,6 +45,9 @@ import { letterPaths, numberPaths, shapePaths } from "./dots-shapes.js";
 import { buildPatternRound, PATTERN_TYPES, PATTERN_DIFFICULTY } from "./pattern.js";
 import { buildOddRound, ODD_SETS } from "./odd.js";
 import { buildMemoryDeck, MEMORY_DIFFICULTY, dailyMemorySeed } from "./memory.js";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { buildWordSearch, SEARCH_DIFFICULTY, lineCells, dailySearchSeed, SEARCH_WORD_EMOJIS, emojiForSearchWord } from "./search.js";
 import library from "./dots-library.json" with { type: "json" };
 import memoryThemes from "./memory-themes.json" with { type: "json" };
@@ -249,6 +252,18 @@ assert(hashString("abc") === hashString("abc"), "hash stable");
 // Home route stays home (maze must not own the URL on boot)
 {
   assert(GAME_PATHS.home === "", "home has empty path segment");
+}
+
+// Hub nav: Mazes / Odd / Memory first; primary row capped; overflow in More
+{
+  const hubPath = join(dirname(fileURLToPath(import.meta.url)), "hub.js");
+  const hubSrc = readFileSync(hubPath, "utf8");
+  assert(
+    /GAME_ORDER\s*=\s*\["mazes",\s*"odd",\s*"memory"/.test(hubSrc),
+    "nav order starts Mazes, Odd One Out, Memory"
+  );
+  assert(/PRIMARY_SLOTS\s*=\s*5/.test(hubSrc), "primary nav shows five games");
+  assert(/offline:\s*true/.test(hubSrc), "Connect the Dots can stay offline from hub");
 }
 
 // Dots sampling

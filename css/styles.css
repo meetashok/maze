@@ -259,7 +259,7 @@ input {
   flex: 1;
 }
 
-/* —— Game hub nav (home + game buttons) —— */
+/* —— Game hub nav (home + up to 5 games + More overflow) —— */
 .game-nav {
   position: relative;
   display: flex;
@@ -294,15 +294,9 @@ input {
 .game-nav-primary {
   flex: 1 1 auto;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--game-slots, 5), minmax(0, 1fr));
   gap: 6px;
   min-width: 0;
-}
-
-@media (max-width: 520px) {
-  .game-nav-primary {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
 }
 
 .game-nav-btn {
@@ -343,6 +337,90 @@ input {
 }
 
 [data-theme="dark"] .game-nav-btn.is-active {
+  color: #7fd9cc;
+}
+
+.game-nav-more {
+  flex: 0 0 auto;
+  width: var(--touch);
+  min-height: var(--touch);
+  padding: 0;
+  border: none;
+  border-radius: calc(var(--radius) - 4px);
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  touch-action: manipulation;
+}
+
+.game-nav-more:hover,
+.game-nav-more.is-open,
+.game-nav-more.is-active {
+  background: var(--floor);
+}
+
+.game-nav-more-icon {
+  display: block;
+  width: 18px;
+  height: 14px;
+  background:
+    linear-gradient(var(--ink), var(--ink)) 0 0 / 100% 2px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) 0 6px / 100% 2px no-repeat,
+    linear-gradient(var(--ink), var(--ink)) 0 12px / 100% 2px no-repeat;
+}
+
+.game-nav-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 20;
+  min-width: 200px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--modal-bg);
+  border: 1px solid var(--panel-border);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.game-nav-menu[hidden] {
+  display: none !important;
+}
+
+.game-nav-menu-item {
+  min-height: 44px;
+  padding: 10px 12px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  touch-action: manipulation;
+}
+
+.game-nav-menu-item .game-nav-emoji {
+  font-size: 1.15rem;
+}
+
+.game-nav-menu-item:hover,
+.game-nav-menu-item.is-active {
+  background: rgba(31, 138, 126, 0.12);
+  color: var(--teal-deep);
+}
+
+[data-theme="dark"] .game-nav-menu-item:hover,
+[data-theme="dark"] .game-nav-menu-item.is-active {
   color: #7fd9cc;
 }
 
