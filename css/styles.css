@@ -301,15 +301,16 @@ input {
 
 .game-nav-btn {
   min-height: var(--touch);
-  padding: 8px 6px;
+  height: var(--touch);
+  padding: 4px 4px;
   border: none;
   border-radius: calc(var(--radius) - 4px);
   background: transparent;
   color: var(--ink-soft);
   font-family: var(--font-display);
-  font-size: clamp(0.72rem, 2.6vw, 0.92rem);
+  font-size: clamp(0.68rem, 2.4vw, 0.92rem);
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1.1;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, box-shadow 0.15s;
   display: flex;
@@ -318,6 +319,7 @@ input {
   justify-content: center;
   gap: 2px;
   touch-action: manipulation;
+  overflow: hidden;
 }
 
 .game-nav-emoji {
@@ -327,6 +329,10 @@ input {
 
 .game-nav-label {
   display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .game-nav-btn.is-active,
